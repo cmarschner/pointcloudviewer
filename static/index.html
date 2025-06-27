@@ -12,28 +12,89 @@
             background-color: #1a1a1a;
             color: white;
             overflow: hidden;
+            display: flex;
+        }
+        
+        #leftPane {
+            width: 320px;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.9);
+            border-right: 1px solid #333;
+            overflow-y: auto;
+            flex-shrink: 0;
         }
         
         #container {
+            flex: 1;
             position: relative;
-            width: 100vw;
             height: 100vh;
+            overflow: hidden;
+        }
+        
+        #rightPane {
+            width: 400px;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.9);
+            border-left: 1px solid #333;
+            overflow-y: auto;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .hierarchy-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        
+        .slice-view-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            border-top: 1px solid #333;
+        }
+        
+        #sliceViewHeader {
+            padding: 15px 20px;
+            border-bottom: 1px solid #333;
+            background: rgba(0, 0, 0, 0.95);
+            flex-shrink: 0;
+        }
+        
+        #sliceViewContainer {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            min-height: 200px;
+        }
+        
+        #sliceCanvas {
+            width: 100%;
+            height: 100%;
+            background: #1a1a1a;
         }
         
         #viewer {
             width: 100%;
             height: 100%;
+            position: relative;
+            z-index: 1;
         }
         
-        #controls {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 100;
-            background: rgba(0, 0, 0, 0.8);
+        .tool-section {
             padding: 20px;
-            border-radius: 8px;
-            min-width: 300px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .tool-section h3 {
+            margin: 0 0 15px 0;
+            color: #fff;
+            font-size: 16px;
         }
         
         #fileInput {
@@ -41,6 +102,10 @@
             padding: 8px;
             width: 100%;
             box-sizing: border-box;
+            background: #333;
+            border: 1px solid #555;
+            color: white;
+            border-radius: 4px;
         }
         
         #uploadBtn {
@@ -51,6 +116,7 @@
             cursor: pointer;
             border-radius: 4px;
             margin-bottom: 10px;
+            width: 100%;
         }
         
         #uploadBtn:hover {
@@ -62,6 +128,7 @@
             padding: 8px;
             border-radius: 4px;
             display: none;
+            font-size: 12px;
         }
         
         .success {
@@ -74,14 +141,19 @@
             color: #f44336;
         }
         
-        #info {
-            margin-top: 10px;
-            font-size: 12px;
-            color: #ccc;
+        .controls-info {
+            font-size: 11px;
+            color: #aaa;
+            line-height: 1.4;
+        }
+        
+        .controls-info strong {
+            color: #fff;
         }
         
         #pointCloudList {
-            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
         }
         
         .point-cloud-item {
@@ -90,6 +162,7 @@
             background: rgba(255, 255, 255, 0.1);
             cursor: pointer;
             border-radius: 4px;
+            font-size: 12px;
         }
         
         .point-cloud-item:hover {
@@ -99,29 +172,236 @@
         .point-cloud-item.active {
             background: rgba(76, 175, 80, 0.3);
         }
+        
+        /* Hierarchy Viewer Styles */
+        .hierarchy-item {
+            padding: 4px 8px;
+            margin: 2px 0;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            user-select: none;
+        }
+        
+        .hierarchy-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .hierarchy-item.selected {
+            background: rgba(76, 175, 80, 0.3);
+        }
+        
+        .hierarchy-item.hidden {
+            opacity: 0.5;
+        }
+        
+        .hierarchy-icon {
+            margin-right: 6px;
+            min-width: 16px;
+            text-align: center;
+        }
+        
+        .hierarchy-toggle {
+            margin-right: 4px;
+            cursor: pointer;
+            color: #666;
+            font-size: 10px;
+            min-width: 12px;
+        }
+        
+        .hierarchy-toggle:hover {
+            color: #aaa;
+        }
+        
+        .hierarchy-children {
+            margin-left: 16px;
+        }
+        
+        .hierarchy-children.collapsed {
+            display: none;
+        }
+        
+        .visibility-toggle {
+            margin-left: auto;
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 2px;
+            font-size: 10px;
+        }
+        
+        .visibility-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        /* Slice Tool Styles */
+        .slice-controls {
+            margin-top: 10px;
+        }
+        
+        .slice-button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin: 4px 4px 4px 0;
+            font-size: 12px;
+        }
+        
+        .slice-button:hover {
+            background: #1976D2;
+        }
+        
+        .slice-button.active {
+            background: #FF9800;
+        }
+        
+        .slice-button.active:hover {
+            background: #F57C00;
+        }
+        
+        .slice-info {
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 8px;
+            line-height: 1.3;
+        }
+        
+        .slice-list {
+            margin-top: 10px;
+        }
+        
+        .slice-item {
+            padding: 6px 8px;
+            margin: 4px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .slice-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .slice-item.active {
+            background: rgba(33, 150, 243, 0.3);
+        }
+        
+        .slice-item.selected {
+            background: rgba(76, 175, 80, 0.3);
+            border: 1px solid rgba(76, 175, 80, 0.6);
+        }
+        
+        .slice-actions {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .slice-action {
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 2px;
+            font-size: 10px;
+        }
+        
+        .slice-action:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
     </style>
 </head>
 <body>
-    <div id="container">
-        <div id="viewer"></div>
-        <div id="controls">
-            <h3>Point Cloud Viewer</h3>
+    <div id="leftPane">
+        <!-- File Upload Tool -->
+        <div class="tool-section">
+            <h3>📁 File Upload</h3>
             <input type="file" id="fileInput" accept=".ply" />
             <button id="uploadBtn">Upload PLY File</button>
             <div id="status"></div>
-            <div id="info">
-                <strong>Controls:</strong><br>
+        </div>
+        
+        <!-- Point Cloud List -->
+        <div class="tool-section">
+            <h3>☁️ Point Clouds</h3>
+            <div id="pointCloudList">
+                <!-- Point cloud items will be added here dynamically -->
+            </div>
+        </div>
+        
+        <!-- Controls Info -->
+        <div class="tool-section">
+            <h3>🎮 Controls</h3>
+            <div class="controls-info">
+                <strong>Mouse:</strong><br>
                 • Left click + drag: Rotate<br>
                 • Right click + drag: Pan<br>
                 • Mouse wheel: Zoom<br>
-                • <strong>Walk Mode:</strong><br>
+                <br>
+                <strong>Walk Mode:</strong><br>
                 • W/S: Forward/Backward<br>
                 • A/D: Left/Right<br>
                 • Q/E: Up/Down<br>
                 • Hold Shift: Move faster
             </div>
-            <div id="pointCloudList">
-                <h4>Loaded Point Clouds:</h4>
+        </div>
+        
+        <!-- Slice Tool -->
+        <div class="tool-section">
+            <h3>✂️ Slice Tool</h3>
+            <div class="slice-controls">
+                <button id="createSliceBtn" class="slice-button">Create Slice</button>
+                <button id="cancelSliceBtn" class="slice-button" style="display: none;">Cancel</button>
+            </div>
+            <div class="slice-info">
+                Click "Create Slice" then draw a line on the 3D viewer. The slice will be perpendicular to your viewing direction.
+            </div>
+            <div class="slice-list" id="sliceList">
+                <!-- Slice items will be added here -->
+            </div>
+        </div>
+    </div>
+    
+    <div id="container">
+        <div id="viewer"></div>
+    </div>
+    
+    <div id="rightPane">
+        <!-- Top Half: Object Hierarchy and Properties -->
+        <div class="hierarchy-section">
+            <!-- Object Hierarchy -->
+            <div class="tool-section">
+                <h3>🌳 Object Hierarchy</h3>
+                <div id="hierarchyTree">
+                    <!-- Hierarchy will be populated here -->
+                </div>
+            </div>
+            
+            <!-- Object Properties -->
+            <div class="tool-section">
+                <h3>📋 Properties</h3>
+                <div id="objectProperties">
+                    <div style="color: #666; font-style: italic; font-size: 12px;">
+                        Select an object to view properties
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bottom Half: 2D Slice View -->
+        <div class="slice-view-section">
+            <div id="sliceViewHeader">
+                <h3 style="margin: 0;">📐 2D Slice View</h3>
+                <div id="sliceViewInfo" style="font-size: 12px; color: #aaa; margin-top: 4px;">
+                    Select a slice to view 2D projection
+                </div>
+            </div>
+            <div id="sliceViewContainer">
+                <canvas id="sliceCanvas"></canvas>
             </div>
         </div>
     </div>
@@ -136,6 +416,21 @@
                 this.renderer = null;
                 this.controls = null;
                 this.currentPointCloud = null;
+                this.selectedObject = null;
+                this.slices = [];
+                this.selectedSlice = null;
+                this.isCreatingSlice = false;
+                this.sliceStartPoint = null;
+                this.sliceCanvas = null;
+                this.sliceCanvasCtx = null;
+                
+                // 2D slice view camera parameters
+                this.sliceViewZoom = 1.0;
+                this.sliceViewPanX = 0;
+                this.sliceViewPanY = 0;
+                this.isDraggingSliceView = false;
+                this.lastSliceMousePos = { x: 0, y: 0 };
+                
                 this.keys = {
                     w: false,
                     a: false,
@@ -149,7 +444,10 @@
                 this.init();
                 this.setupEventListeners();
                 this.setupWalkControls();
+                this.setupSliceTool();
+                this.setupSliceView();
                 this.loadPointCloudList();
+                this.updateHierarchy();
             }
             
             init() {
@@ -336,6 +634,755 @@
                 this.controls.target.copy(targetPosition);
             }
             
+            setupSliceTool() {
+                const createSliceBtn = document.getElementById('createSliceBtn');
+                const cancelSliceBtn = document.getElementById('cancelSliceBtn');
+                const canvas = this.renderer.domElement;
+                
+                createSliceBtn.addEventListener('click', () => {
+                    this.startSliceCreation();
+                });
+                
+                cancelSliceBtn.addEventListener('click', () => {
+                    this.cancelSliceCreation();
+                });
+                
+                // Canvas event listeners for slice creation
+                canvas.addEventListener('mousedown', (event) => {
+                    if (this.isCreatingSlice && event.button === 0) {
+                        const rect = canvas.getBoundingClientRect();
+                        const mouse = new THREE.Vector2(
+                            ((event.clientX - rect.left) / rect.width) * 2 - 1,
+                            -((event.clientY - rect.top) / rect.height) * 2 + 1
+                        );
+                        
+                        if (!this.sliceStartPoint) {
+                            this.sliceStartPoint = mouse.clone();
+                        } else {
+                            this.createSliceFromLine(this.sliceStartPoint, mouse);
+                            this.finishSliceCreation();
+                        }
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                }, true);
+            }
+            
+            startSliceCreation() {
+                this.isCreatingSlice = true;
+                this.sliceStartPoint = null;
+                this.controls.enabled = false;
+                
+                document.getElementById('createSliceBtn').style.display = 'none';
+                document.getElementById('cancelSliceBtn').style.display = 'inline-block';
+                
+                // Change cursor
+                this.renderer.domElement.style.cursor = 'crosshair';
+                
+                this.showStatus('Click two points to define the slice line', 'info');
+            }
+            
+            cancelSliceCreation() {
+                this.isCreatingSlice = false;
+                this.sliceStartPoint = null;
+                this.controls.enabled = true;
+                
+                document.getElementById('createSliceBtn').style.display = 'inline-block';
+                document.getElementById('cancelSliceBtn').style.display = 'none';
+                
+                // Reset cursor
+                this.renderer.domElement.style.cursor = '';
+                
+                this.showStatus('Slice creation cancelled', 'info');
+            }
+            
+            finishSliceCreation() {
+                this.isCreatingSlice = false;
+                this.sliceStartPoint = null;
+                this.controls.enabled = true;
+                
+                document.getElementById('createSliceBtn').style.display = 'inline-block';
+                document.getElementById('cancelSliceBtn').style.display = 'none';
+                
+                // Reset cursor
+                this.renderer.domElement.style.cursor = '';
+            }
+            
+            createSliceFromLine(startMouse, endMouse) {
+                // Convert screen coordinates to world positions
+                const raycaster = new THREE.Raycaster();
+                const camera = this.camera;
+                
+                // Cast rays from both points
+                raycaster.setFromCamera(startMouse, camera);
+                const startRay = raycaster.ray.clone();
+                
+                raycaster.setFromCamera(endMouse, camera);
+                const endRay = raycaster.ray.clone();
+                
+                // Find intersection with a plane at distance from camera
+                const distance = 10; // Default intersection distance
+                const startPoint = startRay.at(distance, new THREE.Vector3());
+                const endPoint = endRay.at(distance, new THREE.Vector3());
+                
+                // Calculate slice plane
+                const lineDirection = endPoint.clone().sub(startPoint).normalize();
+                const viewDirection = camera.getWorldDirection(new THREE.Vector3());
+                
+                // Slice normal is perpendicular to both the line and view direction
+                const sliceNormal = lineDirection.clone().cross(viewDirection).normalize();
+                
+                // Slice plane passes through the midpoint of the line
+                const slicePoint = startPoint.clone().add(endPoint).multiplyScalar(0.5);
+                
+                // Create slice object
+                const slice = {
+                    id: Date.now(),
+                    name: `Slice ${this.slices.length + 1}`,
+                    point: slicePoint,
+                    normal: sliceNormal,
+                    lineStart: startPoint,
+                    lineEnd: endPoint,
+                    visible: true,
+                    mesh: null
+                };
+                
+                // Create visual representation
+                this.createSliceVisualization(slice);
+                
+                // Add to slices array
+                this.slices.push(slice);
+                
+                // Update UI
+                this.updateSliceList();
+                this.updateHierarchy();
+                
+                this.showStatus(`Created ${slice.name}`, 'success');
+            }
+            
+            createSliceVisualization(slice) {
+                // Create a plane mesh to visualize the slice
+                const size = 20; // Size of the visualization plane
+                const geometry = new THREE.PlaneGeometry(size, size);
+                const material = new THREE.MeshBasicMaterial({
+                    color: 0x2196F3,
+                    transparent: true,
+                    opacity: 0.3,
+                    side: THREE.DoubleSide
+                });
+                
+                const planeMesh = new THREE.Mesh(geometry, material);
+                
+                // Position and orient the plane
+                planeMesh.position.copy(slice.point);
+                planeMesh.lookAt(slice.point.clone().add(slice.normal));
+                
+                // Add wireframe outline
+                const edges = new THREE.EdgesGeometry(geometry);
+                const lineMaterial = new THREE.LineBasicMaterial({ color: 0x2196F3 });
+                const wireframe = new THREE.LineSegments(edges, lineMaterial);
+                
+                // Create a group for the slice
+                const sliceGroup = new THREE.Group();
+                sliceGroup.add(planeMesh);
+                sliceGroup.add(wireframe);
+                sliceGroup.name = slice.name;
+                sliceGroup.userData = { sliceId: slice.id, type: 'slice' };
+                
+                this.scene.add(sliceGroup);
+                slice.mesh = sliceGroup;
+            }
+            
+            updateSliceList() {
+                const sliceList = document.getElementById('sliceList');
+                sliceList.innerHTML = '';
+                
+                this.slices.forEach(slice => {
+                    const item = document.createElement('div');
+                    item.className = 'slice-item';
+                    
+                    // Add selected class if this slice is selected
+                    if (this.selectedSlice && this.selectedSlice.id === slice.id) {
+                        item.classList.add('selected');
+                    }
+                    
+                    const name = document.createElement('span');
+                    name.textContent = slice.name;
+                    item.appendChild(name);
+                    
+                    // Add click handler for selection
+                    name.addEventListener('click', () => {
+                        this.selectSlice(slice.id);
+                    });
+                    name.style.cursor = 'pointer';
+                    name.style.flex = '1';
+                    
+                    const actions = document.createElement('div');
+                    actions.className = 'slice-actions';
+                    
+                    // Visibility toggle
+                    const visibilityToggle = document.createElement('span');
+                    visibilityToggle.className = 'slice-action';
+                    visibilityToggle.textContent = slice.visible ? '👁️' : '🚫';
+                    visibilityToggle.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.toggleSliceVisibility(slice.id);
+                    });
+                    actions.appendChild(visibilityToggle);
+                    
+                    // Delete button
+                    const deleteBtn = document.createElement('span');
+                    deleteBtn.className = 'slice-action';
+                    deleteBtn.textContent = '🗑️';
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.deleteSlice(slice.id);
+                    });
+                    actions.appendChild(deleteBtn);
+                    
+                    item.appendChild(actions);
+                    sliceList.appendChild(item);
+                });
+            }
+            
+            toggleSliceVisibility(sliceId) {
+                const slice = this.slices.find(s => s.id === sliceId);
+                if (slice) {
+                    slice.visible = !slice.visible;
+                    if (slice.mesh) {
+                        slice.mesh.visible = slice.visible;
+                    }
+                    this.updateSliceList();
+                    this.updateHierarchy();
+                }
+            }
+            
+            deleteSlice(sliceId) {
+                const sliceIndex = this.slices.findIndex(s => s.id === sliceId);
+                if (sliceIndex !== -1) {
+                    const slice = this.slices[sliceIndex];
+                    
+                    // Remove from scene
+                    if (slice.mesh) {
+                        this.scene.remove(slice.mesh);
+                    }
+                    
+                    // Remove from array
+                    this.slices.splice(sliceIndex, 1);
+                    
+                    // Update UI
+                    this.updateSliceList();
+                    this.updateHierarchy();
+                    
+                    this.showStatus(`Deleted ${slice.name}`, 'info');
+                }
+            }
+            
+            showStatus(message, type) {
+                const status = document.getElementById('status');
+                status.textContent = message;
+                status.className = type;
+                status.style.display = 'block';
+                
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 3000);
+            }
+            
+            setupSliceView() {
+                this.sliceCanvas = document.getElementById('sliceCanvas');
+                this.sliceCanvasCtx = this.sliceCanvas.getContext('2d');
+                
+                // Set canvas size
+                this.resizeSliceCanvas();
+                
+                // Add mouse event listeners for pan and zoom
+                this.sliceCanvas.addEventListener('mousedown', (e) => this.onSliceMouseDown(e));
+                this.sliceCanvas.addEventListener('mousemove', (e) => this.onSliceMouseMove(e));
+                this.sliceCanvas.addEventListener('mouseup', (e) => this.onSliceMouseUp(e));
+                this.sliceCanvas.addEventListener('wheel', (e) => this.onSliceWheel(e));
+                this.sliceCanvas.addEventListener('mouseleave', (e) => this.onSliceMouseUp(e));
+                
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    this.resizeSliceCanvas();
+                    if (this.selectedSlice) {
+                        this.renderSliceView();
+                    }
+                });
+            }
+            
+            onSliceMouseDown(e) {
+                if (e.button === 0) { // Left mouse button
+                    this.isDraggingSliceView = true;
+                    this.lastSliceMousePos.x = e.clientX;
+                    this.lastSliceMousePos.y = e.clientY;
+                    this.sliceCanvas.style.cursor = 'grabbing';
+                }
+            }
+            
+            onSliceMouseMove(e) {
+                if (this.isDraggingSliceView) {
+                    const deltaX = e.clientX - this.lastSliceMousePos.x;
+                    const deltaY = e.clientY - this.lastSliceMousePos.y;
+                    
+                    // Pan (move in opposite direction of mouse movement)
+                    this.sliceViewPanX += deltaX / this.sliceViewZoom;
+                    this.sliceViewPanY += deltaY / this.sliceViewZoom;
+                    
+                    this.lastSliceMousePos.x = e.clientX;
+                    this.lastSliceMousePos.y = e.clientY;
+                    
+                    if (this.selectedSlice) {
+                        this.renderSliceView();
+                    }
+                }
+            }
+            
+            onSliceMouseUp(e) {
+                this.isDraggingSliceView = false;
+                this.sliceCanvas.style.cursor = 'grab';
+            }
+            
+            onSliceWheel(e) {
+                e.preventDefault();
+                
+                const zoomFactor = 1.1;
+                const rect = this.sliceCanvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                // Get world coordinates of mouse position before zoom
+                const worldXBefore = (mouseX - this.sliceViewPanX) / this.sliceViewZoom;
+                const worldYBefore = (mouseY - this.sliceViewPanY) / this.sliceViewZoom;
+                
+                // Apply zoom
+                if (e.deltaY < 0) {
+                    this.sliceViewZoom *= zoomFactor; // Zoom in
+                } else {
+                    this.sliceViewZoom /= zoomFactor; // Zoom out
+                }
+                
+                // Limit zoom range
+                this.sliceViewZoom = Math.max(0.1, Math.min(10.0, this.sliceViewZoom));
+                
+                // Get world coordinates of mouse position after zoom
+                const worldXAfter = (mouseX - this.sliceViewPanX) / this.sliceViewZoom;
+                const worldYAfter = (mouseY - this.sliceViewPanY) / this.sliceViewZoom;
+                
+                // Adjust pan to keep mouse position fixed
+                this.sliceViewPanX += (worldXAfter - worldXBefore) * this.sliceViewZoom;
+                this.sliceViewPanY += (worldYAfter - worldYBefore) * this.sliceViewZoom;
+                
+                if (this.selectedSlice) {
+                    this.renderSliceView();
+                }
+            }
+            
+            resizeSliceCanvas() {
+                const container = document.getElementById('sliceViewContainer');
+                const rect = container.getBoundingClientRect();
+                this.sliceCanvas.width = rect.width;
+                this.sliceCanvas.height = rect.height;
+                this.sliceCanvas.style.width = rect.width + 'px';
+                this.sliceCanvas.style.height = rect.height + 'px';
+            }
+            
+            selectSlice(sliceId) {
+                console.log('Selecting slice:', sliceId);
+                
+                // Update selected slice
+                this.selectedSlice = this.slices.find(s => s.id === sliceId);
+                console.log('Selected slice:', this.selectedSlice);
+                
+                // Reset view parameters when selecting a new slice
+                if (this.selectedSlice) {
+                    this.sliceViewZoom = 1.0;
+                    this.sliceViewPanX = 0;
+                    this.sliceViewPanY = 0;
+                }
+                
+                // Update UI
+                this.updateSliceList();
+                
+                if (this.selectedSlice) {
+                    console.log('Updating slice view');
+                    // Update header info
+                    document.getElementById('sliceViewInfo').textContent = 
+                        `Viewing ${this.selectedSlice.name} - Points within ±10cm with distance-based transparency`;
+                    
+                    // Force a layout update and render
+                    setTimeout(() => {
+                        this.resizeSliceCanvas();
+                        this.renderSliceView();
+                    }, 50);
+                } else {
+                    console.log('Clearing slice view');
+                    // Clear the view
+                    document.getElementById('sliceViewInfo').textContent = 'Select a slice to view 2D projection';
+                    const ctx = this.sliceCanvasCtx;
+                    if (ctx) {
+                        ctx.fillStyle = '#1a1a1a';
+                        ctx.fillRect(0, 0, this.sliceCanvas.width, this.sliceCanvas.height);
+                    }
+                }
+            }
+            
+            renderSliceView() {
+                if (!this.selectedSlice || !this.currentPointCloud) {
+                    return;
+                }
+                
+                const ctx = this.sliceCanvasCtx;
+                const canvas = this.sliceCanvas;
+                
+                // Clear canvas
+                ctx.fillStyle = '#1a1a1a';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Get point cloud data
+                const geometry = this.currentPointCloud.geometry;
+                const positions = geometry.attributes.position.array;
+                const colors = geometry.attributes.color ? geometry.attributes.color.array : null;
+                
+                // Slice parameters
+                const slicePoint = this.selectedSlice.point;
+                const sliceNormal = this.selectedSlice.normal;
+                const maxDistance = 0.1; // 10cm
+                
+                // Create coordinate system for the slice plane
+                // u and v are orthogonal vectors in the plane
+                const u = new THREE.Vector3();
+                const v = new THREE.Vector3();
+                
+                // Find two orthogonal vectors in the plane
+                if (Math.abs(sliceNormal.x) < 0.9) {
+                    u.set(1, 0, 0);
+                } else {
+                    u.set(0, 1, 0);
+                }
+                u.cross(sliceNormal).normalize();
+                v.crossVectors(sliceNormal, u).normalize();
+                
+                // Collect points near the slice
+                const projectedPoints = [];
+                const vertexCount = positions.length / 3;
+                
+                for (let i = 0; i < vertexCount; i++) {
+                    const x = positions[i * 3];
+                    const y = positions[i * 3 + 1];
+                    const z = positions[i * 3 + 2];
+                    
+                    const point = new THREE.Vector3(x, y, z);
+                    const toPoint = point.clone().sub(slicePoint);
+                    
+                    // Distance from point to plane
+                    const distance = Math.abs(toPoint.dot(sliceNormal));
+                    
+                    if (distance <= maxDistance) {
+                        // Project point onto the plane
+                        const projectedPoint = point.clone().sub(sliceNormal.clone().multiplyScalar(toPoint.dot(sliceNormal)));
+                        
+                        // Convert to 2D coordinates in the plane
+                        const relativePoint = projectedPoint.clone().sub(slicePoint);
+                        const uCoord = relativePoint.dot(u);
+                        const vCoord = relativePoint.dot(v);
+                        
+                        // Calculate transparency based on distance
+                        const alpha = 1.0 - (distance / maxDistance);
+                        
+                        // Get color
+                        let r = 1.0, g = 1.0, b = 1.0;
+                        if (colors) {
+                            r = colors[i * 3];
+                            g = colors[i * 3 + 1];
+                            b = colors[i * 3 + 2];
+                        }
+                        
+                        projectedPoints.push({
+                            u: uCoord,
+                            v: vCoord,
+                            r: r,
+                            g: g,
+                            b: b,
+                            alpha: alpha
+                        });
+                    }
+                }
+                
+                if (projectedPoints.length === 0) {
+                    ctx.fillStyle = '#666';
+                    ctx.font = '14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('No points within 10cm of slice', canvas.width / 2, canvas.height / 2);
+                    return;
+                }
+                
+                // Find bounds of projected points
+                let minU = Infinity, maxU = -Infinity;
+                let minV = Infinity, maxV = -Infinity;
+                
+                projectedPoints.forEach(p => {
+                    minU = Math.min(minU, p.u);
+                    maxU = Math.max(maxU, p.u);
+                    minV = Math.min(minV, p.v);
+                    maxV = Math.max(maxV, p.v);
+                });
+                
+                // Add padding
+                const padding = 0.1;
+                const uRange = maxU - minU;
+                const vRange = maxV - minV;
+                minU -= uRange * padding;
+                maxU += uRange * padding;
+                minV -= vRange * padding;
+                maxV += vRange * padding;
+                
+                // Calculate base scale to fit canvas (without zoom)
+                const canvasAspect = canvas.width / canvas.height;
+                const dataAspect = (maxU - minU) / (maxV - minV);
+                
+                let baseScale;
+                if (dataAspect > canvasAspect) {
+                    // Data is wider than canvas
+                    baseScale = canvas.width / (maxU - minU);
+                } else {
+                    // Data is taller than canvas
+                    baseScale = canvas.height / (maxV - minV);
+                }
+                
+                // Apply zoom and pan
+                const scale = baseScale * this.sliceViewZoom;
+                const offsetX = this.sliceViewPanX;
+                const offsetY = this.sliceViewPanY;
+                
+                console.log(`Rendering ${projectedPoints.length} points, scale: ${scale.toFixed(2)}, zoom: ${this.sliceViewZoom.toFixed(2)}`);
+                
+                // Draw points
+                projectedPoints.forEach(p => {
+                    const screenX = (p.u - minU) * scale + offsetX;
+                    const screenY = canvas.height - (p.v - minV) * scale + offsetY; // Flip Y axis
+                    
+                    // Only draw if point is visible on canvas
+                    if (screenX >= -5 && screenX <= canvas.width + 5 && 
+                        screenY >= -5 && screenY <= canvas.height + 5) {
+                        
+                        ctx.globalAlpha = p.alpha;
+                        ctx.fillStyle = `rgb(${Math.floor(p.r * 255)}, ${Math.floor(p.g * 255)}, ${Math.floor(p.b * 255)})`;
+                        
+                        // Scale point size with zoom
+                        const pointSize = Math.max(1, 2 * this.sliceViewZoom);
+                        ctx.fillRect(screenX - pointSize/2, screenY - pointSize/2, pointSize, pointSize);
+                    }
+                });
+                
+                ctx.globalAlpha = 1.0;
+                
+                // Draw coordinate axes
+                this.drawSliceAxes(ctx, canvas, minU, maxU, minV, maxV, scale, offsetX, offsetY);
+            }
+            
+            drawSliceAxes(ctx, canvas, minU, maxU, minV, maxV, scale, offsetX, offsetY) {
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 1;
+                
+                // Draw axes through origin if visible
+                const originU = 0;
+                const originV = 0;
+                
+                if (originU >= minU && originU <= maxU) {
+                    // Draw V axis
+                    const x = (originU - minU) * scale + offsetX;
+                    if (x >= 0 && x <= canvas.width) {
+                        ctx.beginPath();
+                        ctx.moveTo(x, 0);
+                        ctx.lineTo(x, canvas.height);
+                        ctx.stroke();
+                    }
+                }
+                
+                if (originV >= minV && originV <= maxV) {
+                    // Draw U axis
+                    const y = canvas.height - (originV - minV) * scale + offsetY;
+                    if (y >= 0 && y <= canvas.height) {
+                        ctx.beginPath();
+                        ctx.moveTo(0, y);
+                        ctx.lineTo(canvas.width, y);
+                        ctx.stroke();
+                    }
+                }
+                
+                // Draw border
+                ctx.strokeStyle = '#333';
+                ctx.strokeRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            updateHierarchy() {
+                const hierarchyTree = document.getElementById('hierarchyTree');
+                hierarchyTree.innerHTML = '';
+                
+                this.buildHierarchyNode(this.scene, hierarchyTree, 0);
+            }
+            
+            buildHierarchyNode(object, container, depth) {
+                const item = document.createElement('div');
+                item.className = 'hierarchy-item';
+                item.dataset.objectId = object.uuid;
+                
+                // Add expand/collapse toggle for objects with children
+                if (object.children.length > 0) {
+                    const toggle = document.createElement('span');
+                    toggle.className = 'hierarchy-toggle';
+                    toggle.textContent = '▼';
+                    toggle.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.toggleHierarchyNode(item);
+                    });
+                    item.appendChild(toggle);
+                } else {
+                    const spacer = document.createElement('span');
+                    spacer.className = 'hierarchy-toggle';
+                    item.appendChild(spacer);
+                }
+                
+                // Add icon based on object type
+                const icon = document.createElement('span');
+                icon.className = 'hierarchy-icon';
+                if (object.type === 'Scene') {
+                    icon.textContent = '🌍';
+                } else if (object.type === 'Points') {
+                    icon.textContent = '☁️';
+                } else if (object.type === 'GridHelper') {
+                    icon.textContent = '📐';
+                } else if (object.type === 'AxesHelper') {
+                    icon.textContent = '📏';
+                } else if (object.type === 'AmbientLight') {
+                    icon.textContent = '💡';
+                } else if (object.type === 'DirectionalLight') {
+                    icon.textContent = '🔆';
+                } else if (object.type === 'PerspectiveCamera') {
+                    icon.textContent = '📷';
+                } else if (object.userData && object.userData.type === 'slice') {
+                    icon.textContent = '✂️';
+                } else {
+                    icon.textContent = '📦';
+                }
+                item.appendChild(icon);
+                
+                // Add object name/type
+                const name = document.createElement('span');
+                name.textContent = object.name || object.type;
+                item.appendChild(name);
+                
+                // Add visibility toggle
+                const visibilityToggle = document.createElement('span');
+                visibilityToggle.className = 'visibility-toggle';
+                visibilityToggle.textContent = object.visible ? '👁️' : '🚫';
+                visibilityToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.toggleObjectVisibility(object);
+                });
+                item.appendChild(visibilityToggle);
+                
+                // Add click handler for selection
+                item.addEventListener('click', () => {
+                    this.selectObject(object);
+                });
+                
+                container.appendChild(item);
+                
+                // Add children
+                if (object.children.length > 0) {
+                    const childrenContainer = document.createElement('div');
+                    childrenContainer.className = 'hierarchy-children';
+                    
+                    object.children.forEach(child => {
+                        this.buildHierarchyNode(child, childrenContainer, depth + 1);
+                    });
+                    
+                    container.appendChild(childrenContainer);
+                }
+            }
+            
+            toggleHierarchyNode(item) {
+                const toggle = item.querySelector('.hierarchy-toggle');
+                const childrenContainer = item.nextElementSibling;
+                
+                if (childrenContainer && childrenContainer.classList.contains('hierarchy-children')) {
+                    if (childrenContainer.classList.contains('collapsed')) {
+                        childrenContainer.classList.remove('collapsed');
+                        toggle.textContent = '▼';
+                    } else {
+                        childrenContainer.classList.add('collapsed');
+                        toggle.textContent = '▶';
+                    }
+                }
+            }
+            
+            toggleObjectVisibility(object) {
+                object.visible = !object.visible;
+                this.updateHierarchy();
+            }
+            
+            selectObject(object) {
+                // Update selection in hierarchy
+                document.querySelectorAll('.hierarchy-item').forEach(item => {
+                    item.classList.remove('selected');
+                });
+                
+                const selectedItem = document.querySelector(`[data-object-id="${object.uuid}"]`);
+                if (selectedItem) {
+                    selectedItem.classList.add('selected');
+                }
+                
+                this.selectedObject = object;
+                this.updateObjectProperties();
+            }
+            
+            updateObjectProperties() {
+                const propertiesDiv = document.getElementById('objectProperties');
+                
+                if (!this.selectedObject) {
+                    propertiesDiv.innerHTML = '<div style="color: #666; font-style: italic; font-size: 12px;">Select an object to view properties</div>';
+                    return;
+                }
+                
+                const obj = this.selectedObject;
+                let html = `
+                    <div style="margin-bottom: 10px;">
+                        <strong>${obj.name || obj.type}</strong>
+                    </div>
+                    <div style="font-size: 11px; line-height: 1.4;">
+                        <div><strong>Type:</strong> ${obj.type}</div>
+                        <div><strong>UUID:</strong> ${obj.uuid.substring(0, 8)}...</div>
+                        <div><strong>Visible:</strong> ${obj.visible ? 'Yes' : 'No'}</div>
+                `;
+                
+                if (obj.position) {
+                    html += `<div><strong>Position:</strong> (${obj.position.x.toFixed(2)}, ${obj.position.y.toFixed(2)}, ${obj.position.z.toFixed(2)})</div>`;
+                }
+                
+                if (obj.rotation) {
+                    html += `<div><strong>Rotation:</strong> (${obj.rotation.x.toFixed(2)}, ${obj.rotation.y.toFixed(2)}, ${obj.rotation.z.toFixed(2)})</div>`;
+                }
+                
+                if (obj.scale) {
+                    html += `<div><strong>Scale:</strong> (${obj.scale.x.toFixed(2)}, ${obj.scale.y.toFixed(2)}, ${obj.scale.z.toFixed(2)})</div>`;
+                }
+                
+                if (obj.children) {
+                    html += `<div><strong>Children:</strong> ${obj.children.length}</div>`;
+                }
+                
+                if (obj.type === 'Points' && obj.geometry) {
+                    const vertexCount = obj.geometry.attributes.position ? obj.geometry.attributes.position.count : 0;
+                    html += `<div><strong>Vertices:</strong> ${vertexCount.toLocaleString()}</div>`;
+                }
+                
+                html += '</div>';
+                propertiesDiv.innerHTML = html;
+            }
+            
             async uploadFile() {
                 const fileInput = document.getElementById('fileInput');
                 const file = fileInput.files[0];
@@ -446,6 +1493,9 @@
                 this.camera.up.set(0, 0, 1); // Ensure Z is still up after repositioning
                 this.updateRotationTarget(); // Set target 2m in front
                 this.controls.update();
+                
+                // Update hierarchy to show new point cloud
+                this.updateHierarchy();
             }
             
             async loadPointCloudList() {
