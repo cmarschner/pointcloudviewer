@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Point Cloud Viewer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+            overflow: hidden;
+        }
+        
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #viewer {
+            width: 100%;
+            height: 100%;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 8px;
+            min-width: 300px;
+        }
+        
+        #fileInput {
+            margin-bottom: 10px;
+            padding: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        #uploadBtn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        
+        #uploadBtn:hover {
+            background: #45a049;
+        }
+        
+        #status {
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .success {
+            background: rgba(76, 175, 80, 0.3);
+            color: #4CAF50;
+        }
+        
+        .error {
+            background: rgba(244, 67, 54, 0.3);
+            color: #f44336;
+        }
+        
+        #info {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #ccc;
+        }
+        
+        #pointCloudList {
+            margin-top: 10px;
+        }
+        
+        .point-cloud-item {
+            padding: 8px;
+            margin: 4px 0;
+            background: rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        
+        .point-cloud-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .point-cloud-item.active {
+            background: rgba(76, 175, 80, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="viewer"></div>
+        <div id="controls">
+            <h3>Point Cloud Viewer</h3>
+            <input type="file" id="fileInput" accept=".ply" />
+            <button id="uploadBtn">Upload PLY File</button>
+            <div id="status"></div>
+            <div id="info">
+                <strong>Controls:</strong><br>
+                • Left click + drag: Rotate<br>
+                • Right click + drag: Pan<br>
+                • Mouse wheel: Zoom<br>
+                • <strong>Walk Mode:</strong><br>
+                • W/S: Forward/Backward<br>
+                • A/D: Left/Right<br>
+                • Q/E: Up/Down<br>
+                • Hold Shift: Move faster
+            </div>
+            <div id="pointCloudList">
+                <h4>Loaded Point Clouds:</h4>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        class PointCloudViewer {
+            constructor() {
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.controls = null;
+                this.currentPointCloud = null;
+                this.keys = {
+                    w: false,
+                    a: false,
+                    s: false,
+                    d: false,
+                    q: false,
+                    e: false,
+                    shift: false
+                };
+                
+                this.init();
+                this.setupEventListeners();
+                this.setupWalkControls();
+                this.loadPointCloudList();
+            }
+            
+            init() {
+                // Scene
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x1a1a1a);
+                
+                // Camera
+                this.camera = new THREE.PerspectiveCamera(
+                    75,
+                    window.innerWidth / window.innerHeight,
+                    0.1,
+                    1000
+                );
+                this.camera.position.set(-5, -5, 1.7); // Start at 1.7m height (human eye level)
+                this.camera.up.set(0, 0, 1); // Set Z as up direction
+                
+                // Renderer
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(window.devicePixelRatio);
+                document.getElementById('viewer').appendChild(this.renderer.domElement);
+                
+                // Controls
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.1;
+                this.controls.enableZoom = true;
+                this.controls.enablePan = true;
+                this.controls.enableRotate = true;
+                this.controls.screenSpacePanning = false; // Keep panning in world space
+                
+                // Set target 2m in front of camera for natural rotation
+                this.updateRotationTarget();
+                
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+                this.scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(10, 10, 5);
+                this.scene.add(directionalLight);
+                
+                // Grid helper (horizontal X-Y plane with Z up)
+                const gridHelper = new THREE.GridHelper(10, 10, 0x444444, 0x222222);
+                gridHelper.rotateX(Math.PI / 2); // Rotate to lie in X-Y plane
+                gridHelper.rotateZ(Math.PI); // Rotate 180° around Z so Y points away
+                this.scene.add(gridHelper);
+                
+                // Axes helper
+                const axesHelper = new THREE.AxesHelper(2);
+                axesHelper.rotateZ(Math.PI); // Rotate 180° around Z so Y points away
+                this.scene.add(axesHelper);
+                
+                // Start render loop
+                this.animate();
+                
+                // Handle window resize
+                window.addEventListener('resize', () => this.onWindowResize());
+            }
+            
+            setupEventListeners() {
+                const uploadBtn = document.getElementById('uploadBtn');
+                const fileInput = document.getElementById('fileInput');
+                
+                uploadBtn.addEventListener('click', () => this.uploadFile());
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        uploadBtn.textContent = `Upload ${e.target.files[0].name}`;
+                    }
+                });
+            }
+            
+            setupWalkControls() {
+                // Keyboard event listeners
+                window.addEventListener('keydown', (event) => {
+                    switch(event.code) {
+                        case 'KeyW':
+                            this.keys.w = true;
+                            break;
+                        case 'KeyA':
+                            this.keys.a = true;
+                            break;
+                        case 'KeyS':
+                            this.keys.s = true;
+                            break;
+                        case 'KeyD':
+                            this.keys.d = true;
+                            break;
+                        case 'KeyQ':
+                            this.keys.q = true;
+                            break;
+                        case 'KeyE':
+                            this.keys.e = true;
+                            break;
+                        case 'ShiftLeft':
+                        case 'ShiftRight':
+                            this.keys.shift = true;
+                            break;
+                    }
+                });
+                
+                window.addEventListener('keyup', (event) => {
+                    switch(event.code) {
+                        case 'KeyW':
+                            this.keys.w = false;
+                            break;
+                        case 'KeyA':
+                            this.keys.a = false;
+                            break;
+                        case 'KeyS':
+                            this.keys.s = false;
+                            break;
+                        case 'KeyD':
+                            this.keys.d = false;
+                            break;
+                        case 'KeyQ':
+                            this.keys.q = false;
+                            break;
+                        case 'KeyE':
+                            this.keys.e = false;
+                            break;
+                        case 'ShiftLeft':
+                        case 'ShiftRight':
+                            this.keys.shift = false;
+                            break;
+                    }
+                });
+            }
+            
+            handleWalkMovement() {
+                const walkSpeed = 1.0; // 1 m/s walking speed
+                const runSpeed = 3.0;  // 3 m/s running speed
+                const frameRate = 60;  // Assume 60 FPS
+                const baseSpeed = walkSpeed / frameRate; // Speed per frame
+                const fastSpeed = runSpeed / frameRate;
+                const moveSpeed = this.keys.shift ? fastSpeed : baseSpeed;
+                
+                if (!this.keys.w && !this.keys.a && !this.keys.s && !this.keys.d && !this.keys.q && !this.keys.e) {
+                    return; // No movement keys pressed
+                }
+                
+                // Get camera's forward and right vectors
+                const camera = this.camera;
+                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+                const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+                const up = new THREE.Vector3(0, 0, 1); // World up direction (Z axis)
+                
+                // Calculate movement vector
+                let movement = new THREE.Vector3();
+                
+                if (this.keys.w) { // Forward
+                    movement.add(forward.clone().multiplyScalar(moveSpeed));
+                }
+                if (this.keys.s) { // Backward
+                    movement.add(forward.clone().multiplyScalar(-moveSpeed));
+                }
+                if (this.keys.a) { // Left
+                    movement.add(right.clone().multiplyScalar(-moveSpeed));
+                }
+                if (this.keys.d) { // Right
+                    movement.add(right.clone().multiplyScalar(moveSpeed));
+                }
+                if (this.keys.q) { // Up
+                    movement.add(up.clone().multiplyScalar(moveSpeed));
+                }
+                if (this.keys.e) { // Down
+                    movement.add(up.clone().multiplyScalar(-moveSpeed));
+                }
+                
+                // Apply movement to camera
+                camera.position.add(movement);
+                
+                // Update rotation target to stay 2m in front of camera
+                this.updateRotationTarget();
+                this.controls.update();
+            }
+            
+            updateRotationTarget() {
+                // Set rotation target 2m in front of camera for natural first-person rotation
+                const camera = this.camera;
+                const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+                const targetPosition = camera.position.clone().add(forward.multiplyScalar(2.0));
+                this.controls.target.copy(targetPosition);
+            }
+            
+            async uploadFile() {
+                const fileInput = document.getElementById('fileInput');
+                const file = fileInput.files[0];
+                
+                if (!file) {
+                    this.showStatus('Please select a PLY file', 'error');
+                    return;
+                }
+                
+                if (!file.name.toLowerCase().endsWith('.ply')) {
+                    this.showStatus('Please select a PLY file (.ply extension)', 'error');
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                try {
+                    this.showStatus(`Uploading ${file.name}...`, 'success');
+                    
+                    const response = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(result.detail || `HTTP error! status: ${response.status}`);
+                    }
+                    
+                    this.showStatus(`Uploaded successfully! ${result.vertex_count} vertices`, 'success');
+                    
+                    // Load the point cloud
+                    await this.loadPointCloud(result.file_id);
+                    
+                    // Refresh the point cloud list
+                    this.loadPointCloudList();
+                    
+                    // Reset file input
+                    fileInput.value = '';
+                    document.getElementById('uploadBtn').textContent = 'Upload PLY File';
+                    
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    this.showStatus(`Upload failed: ${error.message}`, 'error');
+                }
+            }
+            
+            async loadPointCloud(fileId) {
+                try {
+                    const response = await fetch(`/pointcloud/${fileId}`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    this.displayPointCloud(data);
+                    this.showStatus(`Loaded ${data.vertex_count} points`, 'success');
+                    
+                } catch (error) {
+                    console.error('Load error:', error);
+                    this.showStatus(`Load failed: ${error.message}`, 'error');
+                }
+            }
+            
+            displayPointCloud(data) {
+                // Remove existing point cloud
+                if (this.currentPointCloud) {
+                    this.scene.remove(this.currentPointCloud);
+                    this.currentPointCloud.geometry.dispose();
+                    this.currentPointCloud.material.dispose();
+                }
+                
+                // Create geometry
+                const geometry = new THREE.BufferGeometry();
+                
+                // Set vertices
+                const vertices = new Float32Array(data.vertices);
+                geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                
+                // Set colors
+                if (data.colors && data.colors.length > 0) {
+                    const colors = new Float32Array(data.colors);
+                    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                }
+                
+                // Create material
+                const material = new THREE.PointsMaterial({
+                    size: 0.02,
+                    vertexColors: data.colors && data.colors.length > 0,
+                    sizeAttenuation: true
+                });
+                
+                // Create points
+                this.currentPointCloud = new THREE.Points(geometry, material);
+                this.scene.add(this.currentPointCloud);
+                
+                // Center the point cloud
+                geometry.computeBoundingBox();
+                const center = geometry.boundingBox.getCenter(new THREE.Vector3());
+                this.currentPointCloud.position.sub(center);
+                
+                // Adjust camera to fit the point cloud but maintain human height
+                const size = geometry.boundingBox.getSize(new THREE.Vector3());
+                const maxDim = Math.max(size.x, size.y, size.z);
+                this.camera.position.set(-maxDim, -maxDim, 1.7); // Keep at 1.7m height
+                this.camera.up.set(0, 0, 1); // Ensure Z is still up after repositioning
+                this.updateRotationTarget(); // Set target 2m in front
+                this.controls.update();
+            }
+            
+            async loadPointCloudList() {
+                try {
+                    const response = await fetch('/pointclouds');
+                    if (!response.ok) return;
+                    
+                    const data = await response.json();
+                    const listContainer = document.getElementById('pointCloudList');
+                    
+                    // Clear existing list
+                    const existingItems = listContainer.querySelectorAll('.point-cloud-item');
+                    existingItems.forEach(item => item.remove());
+                    
+                    // Add point clouds to list
+                    data.point_clouds.forEach(pc => {
+                        const item = document.createElement('div');
+                        item.className = 'point-cloud-item';
+                        item.textContent = `${pc.file_id} (${pc.vertex_count} points)`;
+                        item.addEventListener('click', () => {
+                            // Remove active class from all items
+                            listContainer.querySelectorAll('.point-cloud-item').forEach(i => 
+                                i.classList.remove('active'));
+                            // Add active class to clicked item
+                            item.classList.add('active');
+                            // Load the point cloud
+                            this.loadPointCloud(pc.file_id);
+                        });
+                        listContainer.appendChild(item);
+                    });
+                    
+                } catch (error) {
+                    console.error('Failed to load point cloud list:', error);
+                }
+            }
+            
+            showStatus(message, type) {
+                const status = document.getElementById('status');
+                status.textContent = message;
+                status.className = type;
+                status.style.display = 'block';
+                
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 3000);
+            }
+            
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                this.handleWalkMovement(); // Handle keyboard-based walk movement
+                this.controls.update();
+                this.renderer.render(this.scene, this.camera);
+            }
+            
+            onWindowResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        }
+        
+        // Initialize the viewer when the page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            new PointCloudViewer();
+        });
+    </script>
+</body>
+</html>
