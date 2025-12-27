@@ -6,9 +6,18 @@ import json
 import struct
 import os
 import math
-from typing import List, Dict, Any
+import argparse
+from pathlib import Path
+from typing import List, Dict, Any, Optional
 
 app = FastAPI(title="Point Cloud Viewer", version="1.0.0")
+
+# Global configuration
+config = {
+    "mode": "upload",  # "upload" or "potree"
+    "potree_path": None,
+    "potree_name": None
+}
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -426,5 +435,55 @@ async def list_point_clouds():
         ]
     }
 
+@app.get("/api/config")
+async def get_config():
+    """Get application configuration"""
+    return {
+        "mode": config["mode"],
+        "potree_name": config["potree_name"],
+        "potree_path": config["potree_path"]
+    }
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    parser = argparse.ArgumentParser(description="Point Cloud Viewer")
+    parser.add_argument("--potree", type=str, help="Path to Potree directory (enables potree mode)")
+    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to bind to")
+    parser.add_argument("--port", type=int, default=8000, help="Port to bind to")
+    args = parser.parse_args()
+
+    # Configure potree mode if path is provided
+    if args.potree:
+        potree_path = Path(args.potree)
+        if not potree_path.exists():
+            print(f"Error: Potree directory not found: {potree_path}")
+            exit(1)
+
+        # Check for required files (support both Potree 1.x and 2.x formats)
+        cloud_js = potree_path / "cloud.js"  # Potree 1.x
+        metadata_json = potree_path / "pointclouds" / "index" / "metadata.json"  # Potree 2.x
+
+        if cloud_js.exists():
+            print(f"  Format: Potree 1.x (cloud.js)")
+        elif metadata_json.exists():
+            print(f"  Format: Potree 2.x (metadata.json)")
+        else:
+            print(f"Error: No Potree files found in {potree_path}")
+            print(f"  Looked for: cloud.js (1.x) or pointclouds/index/metadata.json (2.x)")
+            exit(1)
+
+        config["mode"] = "potree"
+        config["potree_path"] = str(potree_path.absolute())
+        config["potree_name"] = potree_path.name
+
+        # Mount the Potree directory
+        app.mount("/potree", StaticFiles(directory=str(potree_path)), name="potree")
+
+        print(f"✓ Potree mode enabled")
+        print(f"  Directory: {config['potree_path']}")
+        print(f"  Name: {config['potree_name']}")
+    else:
+        print(f"✓ Upload mode enabled")
+        print(f"  Users can upload PLY files")
+
+    print(f"\nStarting server on {args.host}:{args.port}")
+    uvicorn.run(app, host=args.host, port=args.port)
