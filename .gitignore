@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+*.egg-info/
+
+# Point cloud data files (large, don't commit)
+*.e57
+*.las
+*.laz
+*.ply
+KP_Giesing/
+KP_Giesing_Potree*/
+Cloud_*.e57
+Cloud_*.las
+
+# Archives
+*.tgz
+*.tar.gz
+*.zip
+
+# Downloaded libraries
+potree-*/
+
+# IDE
+.vscode/
+*.code-workspace
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+2025-*-code*.txt

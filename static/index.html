@@ -86,6 +86,13 @@
             z-index: 1;
         }
         
+        /* Ensure 3D viewer tab takes full height */
+        #container .tab-panel[data-panel="viewer3d"] {
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        
         .tool-section {
             padding: 20px;
             border-bottom: 1px solid #333;
@@ -313,102 +320,562 @@
         .slice-action:hover {
             background: rgba(255, 255, 255, 0.2);
         }
+        
+        /* Tab System Styles */
+        .pane {
+            position: relative;
+        }
+        
+        .tab-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .tab-header {
+            display: flex;
+            background: rgba(0, 0, 0, 0.95);
+            border-bottom: 1px solid #333;
+            min-height: 35px;
+            flex-shrink: 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+        
+        .tab {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-right: 1px solid #333;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            min-width: 80px;
+            justify-content: center;
+            transition: background-color 0.2s ease;
+            position: relative;
+        }
+        
+        .tab:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .tab.active {
+            background: rgba(76, 175, 80, 0.3);
+            border-bottom: 2px solid #4CAF50;
+        }
+        
+        .tab.dragging {
+            opacity: 0.5;
+            transform: rotate(3deg);
+            z-index: 1000;
+            position: relative;
+        }
+        
+        .tab.drag-over {
+            background: rgba(33, 150, 243, 0.3);
+            border-left: 3px solid #2196F3;
+        }
+        
+        .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        .tab-panel {
+            display: none;
+            height: 100%;
+            overflow-y: auto;
+        }
+        
+        .tab-panel.active {
+            display: block;
+        }
+        
+        .tab-panel.full-height {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .tab-panel.full-height.active {
+            display: flex;
+        }
+        
+        .tab-panel.full-height #sliceViewContainer {
+            flex: 1;
+            min-height: 200px;
+        }
+        
+        .tab-panel.full-height #sliceViewHeader {
+            flex-shrink: 0;
+        }
+        
+        /* Drop zone indicators */
+        .pane.drop-target {
+            position: relative;
+        }
+        
+        .pane.drop-target::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(33, 150, 243, 0.1);
+            border: 2px dashed #2196F3;
+            z-index: 999;
+            pointer-events: none;
+        }
+        
+        .tab-drop-indicator {
+            position: absolute;
+            height: 2px;
+            background: #2196F3;
+            z-index: 1001;
+            top: 35px;
+            left: 0;
+            right: 0;
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <div id="leftPane">
-        <!-- File Upload Tool -->
-        <div class="tool-section">
-            <h3>📁 File Upload</h3>
-            <input type="file" id="fileInput" accept=".ply" />
-            <button id="uploadBtn">Upload PLY File</button>
-            <div id="status"></div>
-        </div>
-        
-        <!-- Point Cloud List -->
-        <div class="tool-section">
-            <h3>☁️ Point Clouds</h3>
-            <div id="pointCloudList">
-                <!-- Point cloud items will be added here dynamically -->
+    <div id="leftPane" class="pane">
+        <div class="tab-container">
+            <div class="tab-header">
+                <div class="tab" data-tab="files">📁 Files</div>
+                <div class="tab" data-tab="controls">🎮 Controls</div>
+                <div class="tab" data-tab="slice">✂️ Slice</div>
             </div>
-        </div>
-        
-        <!-- Controls Info -->
-        <div class="tool-section">
-            <h3>🎮 Controls</h3>
-            <div class="controls-info">
-                <strong>Mouse:</strong><br>
-                • Left click + drag: Rotate<br>
-                • Right click + drag: Pan<br>
-                • Mouse wheel: Zoom<br>
-                <br>
-                <strong>Walk Mode:</strong><br>
-                • W/S: Forward/Backward<br>
-                • A/D: Left/Right<br>
-                • Q/E: Up/Down<br>
-                • Hold Shift: Move faster
-            </div>
-        </div>
-        
-        <!-- Slice Tool -->
-        <div class="tool-section">
-            <h3>✂️ Slice Tool</h3>
-            <div class="slice-controls">
-                <button id="createSliceBtn" class="slice-button">Create Slice</button>
-                <button id="cancelSliceBtn" class="slice-button" style="display: none;">Cancel</button>
-            </div>
-            <div class="slice-info">
-                Click "Create Slice" then draw a line on the 3D viewer. The slice will be perpendicular to your viewing direction.
-            </div>
-            <div class="slice-list" id="sliceList">
-                <!-- Slice items will be added here -->
-            </div>
-        </div>
-    </div>
-    
-    <div id="container">
-        <div id="viewer"></div>
-    </div>
-    
-    <div id="rightPane">
-        <!-- Top Half: Object Hierarchy and Properties -->
-        <div class="hierarchy-section">
-            <!-- Object Hierarchy -->
-            <div class="tool-section">
-                <h3>🌳 Object Hierarchy</h3>
-                <div id="hierarchyTree">
-                    <!-- Hierarchy will be populated here -->
+            <div class="tab-content">
+                <!-- Files Tab -->
+                <div class="tab-panel" data-panel="files">
+                    <div class="tool-section">
+                        <h3>📁 File Upload</h3>
+                        <input type="file" id="fileInput" accept=".ply" />
+                        <button id="uploadBtn">Upload PLY File</button>
+                        <div id="progressContainer" style="display: none; margin-top: 10px;">
+                            <div id="progressBar" style="width: 100%; background-color: #333; border-radius: 4px; overflow: hidden;">
+                                <div id="progressFill" style="height: 20px; background-color: #4CAF50; width: 0%; transition: width 0.3s ease;"></div>
+                            </div>
+                            <div id="progressText" style="text-align: center; margin-top: 5px; font-size: 12px; color: #ccc;">Uploading...</div>
+                        </div>
+                        <div id="status"></div>
+                    </div>
+                    
+                    <!-- Point Cloud List -->
+                    <div class="tool-section">
+                        <h3>☁️ Point Clouds</h3>
+                        <div id="pointCloudList">
+                            <!-- Point cloud items will be added here dynamically -->
+                        </div>
+                    </div>
                 </div>
-            </div>
-            
-            <!-- Object Properties -->
-            <div class="tool-section">
-                <h3>📋 Properties</h3>
-                <div id="objectProperties">
-                    <div style="color: #666; font-style: italic; font-size: 12px;">
-                        Select an object to view properties
+                
+                <!-- Controls Tab -->
+                <div class="tab-panel" data-panel="controls">
+                    <div class="tool-section">
+                        <h3>📍 Camera Position</h3>
+                        <div id="positionInfo" style="font-size: 11px; color: #aaa; line-height: 1.6; font-family: monospace;">
+                            <div>X: <span id="camX">0.0</span> m</div>
+                            <div>Y: <span id="camY">0.0</span> m</div>
+                            <div>Z: <span id="camZ">0.0</span> m</div>
+                        </div>
+                    </div>
+                    <div class="tool-section">
+                        <h3>🔍 Level of Detail</h3>
+                        <div id="lodInfo" style="font-size: 11px; color: #aaa; line-height: 1.6; font-family: monospace;">
+                            <div>Depth: <span id="lodDepth" style="color: #4CAF50; font-weight: bold;">0</span></div>
+                            <div>Nodes: <span id="lodNodes">1</span></div>
+                            <div style="font-size: 10px; margin-top: 4px; color: #666;">M: More detail<br>N: Less detail</div>
+                        </div>
+                    </div>
+                    <div class="tool-section">
+                        <h3>🎮 Controls</h3>
+                        <div class="controls-info">
+                            <strong>Mouse:</strong><br>
+                            • Left click + drag: Rotate<br>
+                            • Right click + drag: Pan<br>
+                            • Mouse wheel: Zoom<br>
+                            <br>
+                            <strong>Walk Mode:</strong><br>
+                            • W/S: Forward/Backward<br>
+                            • A/D: Strafe Left/Right<br>
+                            • Y or Z: Move UP (vertical)<br>
+                            • C: Move DOWN (vertical)<br>
+                            • Q/E: Turn head left/right<br>
+                            • Shift: Run (4 m/s vs 1.5 m/s)<br>
+                            <br>
+                            <strong>Level of Detail:</strong><br>
+                            • M: More detail (load finer LOD)<br>
+                            • N: Less detail (show coarser LOD)
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Slice Tab -->
+                <div class="tab-panel" data-panel="slice">
+                    <div class="tool-section">
+                        <h3>✂️ Slice Tool</h3>
+                        <div class="slice-controls">
+                            <button id="createSliceBtn" class="slice-button">Create Slice</button>
+                            <button id="cancelSliceBtn" class="slice-button" style="display: none;">Cancel</button>
+                        </div>
+                        <div class="slice-info">
+                            Click "Create Slice" then draw a line on the 3D viewer. The slice will be perpendicular to your viewing direction.
+                        </div>
+                        <div class="slice-list" id="sliceList">
+                            <!-- Slice items will be added here -->
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Bottom Half: 2D Slice View -->
-        <div class="slice-view-section">
-            <div id="sliceViewHeader">
-                <h3 style="margin: 0;">📐 2D Slice View</h3>
-                <div id="sliceViewInfo" style="font-size: 12px; color: #aaa; margin-top: 4px;">
-                    Select a slice to view 2D projection
+    </div>
+    
+    <div id="container" class="pane">
+        <div class="tab-container">
+            <div class="tab-header">
+                <div class="tab" data-tab="viewer3d">🎯 3D Viewer</div>
+            </div>
+            <div class="tab-content">
+                <!-- 3D Viewer Tab -->
+                <div class="tab-panel full-height" data-panel="viewer3d">
+                    <div id="viewer"></div>
                 </div>
             </div>
-            <div id="sliceViewContainer">
-                <canvas id="sliceCanvas"></canvas>
+        </div>
+    </div>
+    
+    <div id="rightPane" class="pane">
+        <div class="tab-container">
+            <div class="tab-header">
+                <div class="tab" data-tab="hierarchy">🌳 Hierarchy</div>
+                <div class="tab" data-tab="properties">📋 Properties</div>
+                <div class="tab" data-tab="sliceview">📐 Slice View</div>
+            </div>
+            <div class="tab-content">
+                <!-- Hierarchy Tab -->
+                <div class="tab-panel" data-panel="hierarchy">
+                    <div class="tool-section">
+                        <h3>🌳 Object Hierarchy</h3>
+                        <div id="hierarchyTree">
+                            <!-- Hierarchy will be populated here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Properties Tab -->
+                <div class="tab-panel" data-panel="properties">
+                    <div class="tool-section">
+                        <h3>📋 Properties</h3>
+                        <div id="objectProperties">
+                            <div style="color: #666; font-style: italic; font-size: 12px;">
+                                Select an object to view properties
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Slice View Tab -->
+                <div class="tab-panel full-height" data-panel="sliceview">
+                    <div id="sliceViewHeader">
+                        <h3 style="margin: 0;">📐 2D Slice View</h3>
+                        <div id="sliceViewInfo" style="font-size: 12px; color: #aaa; margin-top: 4px;">
+                            Select a slice to view 2D projection
+                        </div>
+                    </div>
+                    <div id="sliceViewContainer">
+                        <canvas id="sliceCanvas"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Use Potree's bundled Three.js for compatibility -->
+    <script src="https://cdn.jsdelivr.net/gh/potree/potree@1.8.2/libs/three.js/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/potree/potree@1.8.2/libs/three.js/extra/lines.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Load Potree dependencies -->
+    <script src="/potree/libs/jquery/jquery-3.1.1.min.js"></script>
+    <script src="/potree/libs/proj4/proj4.js"></script>
+    <script src="/potree/libs/other/BinaryHeap.js"></script>
+    <script src="/potree/libs/tween/tween.min.js"></script>
+    <script src="/potree/libs/d3/d3.js"></script>
+    <!-- Load Potree library -->
+    <script src="/potree/libs/potree/potree.js"></script>
     <script>
+        class TabManager {
+            constructor() {
+                this.panes = new Map();
+                this.tabs = new Map();
+                this.draggedTab = null;
+                this.draggedTabData = null;
+                this.init();
+            }
+            
+            init() {
+                // Initialize all panes
+                document.querySelectorAll('.pane').forEach(pane => {
+                    this.initPane(pane);
+                });
+                
+                // Set initial active tabs
+                this.activateTab('leftPane', 'files');
+                this.activateTab('container', 'viewer3d');
+                this.activateTab('rightPane', 'hierarchy');
+            }
+            
+            initPane(pane) {
+                const paneId = pane.id;
+                const tabs = new Map();
+                
+                // Initialize tabs in this pane
+                pane.querySelectorAll('.tab').forEach(tab => {
+                    const tabId = tab.dataset.tab;
+                    const panel = pane.querySelector(`[data-panel="${tabId}"]`);
+                    
+                    tabs.set(tabId, {
+                        element: tab,
+                        panel: panel,
+                        title: tab.textContent.trim()
+                    });
+                    
+                    // Add event listeners
+                    this.setupTabEvents(tab, tabId, paneId);
+                });
+                
+                this.panes.set(paneId, {
+                    element: pane,
+                    tabs: tabs,
+                    activeTab: null
+                });
+                
+                // Setup pane drop events
+                this.setupPaneDropEvents(pane, paneId);
+            }
+            
+            setupTabEvents(tab, tabId, paneId) {
+                // Click to activate
+                tab.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.activateTab(paneId, tabId);
+                });
+                
+                // Drag events
+                tab.draggable = true;
+                
+                tab.addEventListener('dragstart', (e) => {
+                    this.startTabDrag(e, tabId, paneId);
+                });
+                
+                tab.addEventListener('dragend', (e) => {
+                    this.endTabDrag(e);
+                });
+                
+                // Drop on tab (for reordering)
+                tab.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    if (this.draggedTab && this.draggedTab !== tab) {
+                        tab.classList.add('drag-over');
+                    }
+                });
+                
+                tab.addEventListener('dragleave', (e) => {
+                    tab.classList.remove('drag-over');
+                });
+                
+                tab.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    tab.classList.remove('drag-over');
+                    if (this.draggedTab && this.draggedTab !== tab) {
+                        this.reorderTab(tab, paneId);
+                    }
+                });
+            }
+            
+            setupPaneDropEvents(pane, paneId) {
+                pane.addEventListener('dragover', (e) => {
+                    if (this.draggedTab) {
+                        e.preventDefault();
+                        pane.classList.add('drop-target');
+                    }
+                });
+                
+                pane.addEventListener('dragleave', (e) => {
+                    if (!pane.contains(e.relatedTarget)) {
+                        pane.classList.remove('drop-target');
+                    }
+                });
+                
+                pane.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    pane.classList.remove('drop-target');
+                    if (this.draggedTab && this.draggedTabData) {
+                        this.moveTabToPane(paneId);
+                    }
+                });
+            }
+            
+            startTabDrag(e, tabId, paneId) {
+                const pane = this.panes.get(paneId);
+                const tabData = pane.tabs.get(tabId);
+                
+                this.draggedTab = tabData.element;
+                this.draggedTabData = {
+                    tabId: tabId,
+                    sourcePaneId: paneId,
+                    title: tabData.title,
+                    panel: tabData.panel
+                };
+                
+                this.draggedTab.classList.add('dragging');
+                
+                // Set drag data
+                e.dataTransfer.setData('text/plain', tabId);
+                e.dataTransfer.effectAllowed = 'move';
+            }
+            
+            endTabDrag(e) {
+                if (this.draggedTab) {
+                    this.draggedTab.classList.remove('dragging');
+                }
+                
+                // Clean up drag over states
+                document.querySelectorAll('.tab.drag-over').forEach(tab => {
+                    tab.classList.remove('drag-over');
+                });
+                
+                document.querySelectorAll('.pane.drop-target').forEach(pane => {
+                    pane.classList.remove('drop-target');
+                });
+                
+                this.draggedTab = null;
+                this.draggedTabData = null;
+            }
+            
+            moveTabToPane(targetPaneId) {
+                if (!this.draggedTabData || this.draggedTabData.sourcePaneId === targetPaneId) {
+                    return;
+                }
+                
+                const sourcePane = this.panes.get(this.draggedTabData.sourcePaneId);
+                const targetPane = this.panes.get(targetPaneId);
+                const tabData = this.draggedTabData;
+                
+                // Remove from source pane
+                sourcePane.tabs.delete(tabData.tabId);
+                sourcePane.element.querySelector('.tab-header').removeChild(this.draggedTab);
+                sourcePane.element.querySelector('.tab-content').removeChild(tabData.panel);
+                
+                // Add to target pane
+                const newTab = this.createTab(tabData.tabId, tabData.title);
+                targetPane.element.querySelector('.tab-header').appendChild(newTab);
+                targetPane.element.querySelector('.tab-content').appendChild(tabData.panel);
+                
+                // Update target pane's tab map
+                targetPane.tabs.set(tabData.tabId, {
+                    element: newTab,
+                    panel: tabData.panel,
+                    title: tabData.title
+                });
+                
+                // Setup events for new tab
+                this.setupTabEvents(newTab, tabData.tabId, targetPaneId);
+                
+                // Activate the moved tab
+                this.activateTab(targetPaneId, tabData.tabId);
+                
+                // If source pane has no active tab, activate first available
+                if (sourcePane.activeTab === tabData.tabId) {
+                    const firstTab = sourcePane.tabs.keys().next().value;
+                    if (firstTab) {
+                        this.activateTab(this.draggedTabData.sourcePaneId, firstTab);
+                    }
+                }
+            }
+            
+            reorderTab(targetTab, paneId) {
+                const pane = this.panes.get(paneId);
+                const tabHeader = pane.element.querySelector('.tab-header');
+                
+                // Get the position to insert
+                const targetIndex = Array.from(tabHeader.children).indexOf(targetTab);
+                const draggedIndex = Array.from(tabHeader.children).indexOf(this.draggedTab);
+                
+                if (targetIndex !== draggedIndex) {
+                    if (targetIndex < draggedIndex) {
+                        tabHeader.insertBefore(this.draggedTab, targetTab);
+                    } else {
+                        tabHeader.insertBefore(this.draggedTab, targetTab.nextSibling);
+                    }
+                }
+            }
+            
+            createTab(tabId, title) {
+                const tab = document.createElement('div');
+                tab.className = 'tab';
+                tab.dataset.tab = tabId;
+                tab.textContent = title;
+                tab.draggable = true;
+                return tab;
+            }
+            
+            activateTab(paneId, tabId) {
+                const pane = this.panes.get(paneId);
+                if (!pane || !pane.tabs.has(tabId)) {
+                    return;
+                }
+                
+                // Deactivate current active tab
+                if (pane.activeTab) {
+                    const currentTab = pane.tabs.get(pane.activeTab);
+                    if (currentTab) {
+                        currentTab.element.classList.remove('active');
+                        currentTab.panel.classList.remove('active');
+                    }
+                }
+                
+                // Activate new tab
+                const newTab = pane.tabs.get(tabId);
+                newTab.element.classList.add('active');
+                newTab.panel.classList.add('active');
+                pane.activeTab = tabId;
+                
+                // Special handling for slice view and 3D viewer
+                if (tabId === 'sliceview') {
+                    // Trigger canvas resize after tab becomes visible
+                    setTimeout(() => {
+                        if (window.pointCloudViewer) {
+                            window.pointCloudViewer.resizeSliceCanvas();
+                            if (window.pointCloudViewer.selectedSlice) {
+                                window.pointCloudViewer.renderSliceView();
+                            }
+                        }
+                    }, 50);
+                } else if (tabId === 'viewer3d') {
+                    // Trigger 3D viewer resize after tab becomes visible
+                    setTimeout(() => {
+                        if (window.pointCloudViewer) {
+                            window.pointCloudViewer.onWindowResize();
+                        }
+                    }, 50);
+                }
+            }
+            
+            getActiveTab(paneId) {
+                const pane = this.panes.get(paneId);
+                return pane ? pane.activeTab : null;
+            }
+        }
+
         class PointCloudViewer {
             constructor() {
                 this.scene = null;
@@ -430,7 +897,9 @@
                 this.sliceViewPanY = 0;
                 this.isDraggingSliceView = false;
                 this.lastSliceMousePos = { x: 0, y: 0 };
-                
+
+                this.clock = new THREE.Clock();  // For Potree viewer
+
                 this.keys = {
                     w: false,
                     a: false,
@@ -438,73 +907,56 @@
                     d: false,
                     q: false,
                     e: false,
+                    y: false,
+                    z: false,
+                    c: false,
                     shift: false
                 };
+
+                this.currentLODDepth = 0; // Current LOD depth (0 = root only)
                 
                 this.init();
                 this.setupEventListeners();
                 this.setupWalkControls();
                 this.setupSliceTool();
                 this.setupSliceView();
-                this.loadPointCloudList();
+                this.checkConfigAndLoad(); // Check mode and load accordingly
                 this.updateHierarchy();
             }
             
             init() {
-                // Scene
+                // Initialize with basic Three.js setup
+                // This will be replaced by Potree.Viewer in Potree mode
                 this.scene = new THREE.Scene();
                 this.scene.background = new THREE.Color(0x1a1a1a);
-                
-                // Camera
-                this.camera = new THREE.PerspectiveCamera(
-                    75,
-                    window.innerWidth / window.innerHeight,
-                    0.1,
-                    1000
-                );
-                this.camera.position.set(-5, -5, 1.7); // Start at 1.7m height (human eye level)
-                this.camera.up.set(0, 0, 1); // Set Z as up direction
-                
-                // Renderer
+
+                const viewportWidth = this.getViewportWidth();
+                const viewportHeight = this.getViewportHeight();
+
+                this.camera = new THREE.PerspectiveCamera(75, viewportWidth / viewportHeight, 0.1, 1000);
+                this.camera.position.set(-5, -5, 1.7);
+                this.camera.up.set(0, 0, 1);
+
                 this.renderer = new THREE.WebGLRenderer({ antialias: true });
-                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setSize(viewportWidth, viewportHeight);
                 this.renderer.setPixelRatio(window.devicePixelRatio);
                 document.getElementById('viewer').appendChild(this.renderer.domElement);
-                
-                // Controls
+
                 this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
                 this.controls.enableDamping = true;
                 this.controls.dampingFactor = 0.1;
-                this.controls.enableZoom = true;
-                this.controls.enablePan = true;
-                this.controls.enableRotate = true;
-                this.controls.screenSpacePanning = false; // Keep panning in world space
-                
-                // Set target 2m in front of camera for natural rotation
-                this.updateRotationTarget();
-                
+
                 // Lighting
                 const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
                 this.scene.add(ambientLight);
-                
+
                 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
                 directionalLight.position.set(10, 10, 5);
                 this.scene.add(directionalLight);
-                
-                // Grid helper (horizontal X-Y plane with Z up)
-                const gridHelper = new THREE.GridHelper(10, 10, 0x444444, 0x222222);
-                gridHelper.rotateX(Math.PI / 2); // Rotate to lie in X-Y plane
-                gridHelper.rotateZ(Math.PI); // Rotate 180° around Z so Y points away
-                this.scene.add(gridHelper);
-                
-                // Axes helper
-                const axesHelper = new THREE.AxesHelper(2);
-                axesHelper.rotateZ(Math.PI); // Rotate 180° around Z so Y points away
-                this.scene.add(axesHelper);
-                
+
                 // Start render loop
                 this.animate();
-                
+
                 // Handle window resize
                 window.addEventListener('resize', () => this.onWindowResize());
             }
@@ -543,9 +995,26 @@
                         case 'KeyE':
                             this.keys.e = true;
                             break;
+                        case 'KeyY':
+                            this.keys.y = true;
+                            break;
+                        case 'KeyZ':
+                            this.keys.z = true;
+                            break;
+                        case 'KeyC':
+                            this.keys.c = true;
+                            break;
                         case 'ShiftLeft':
                         case 'ShiftRight':
                             this.keys.shift = true;
+                            break;
+                        case 'KeyM':
+                            // Increase LOD depth (more detail)
+                            this.increaseLODDepth();
+                            break;
+                        case 'KeyN':
+                            // Decrease LOD depth (less detail)
+                            this.decreaseLODDepth();
                             break;
                     }
                 });
@@ -570,6 +1039,15 @@
                         case 'KeyE':
                             this.keys.e = false;
                             break;
+                        case 'KeyY':
+                            this.keys.y = false;
+                            break;
+                        case 'KeyZ':
+                            this.keys.z = false;
+                            break;
+                        case 'KeyC':
+                            this.keys.c = false;
+                            break;
                         case 'ShiftLeft':
                         case 'ShiftRight':
                             this.keys.shift = false;
@@ -579,19 +1057,20 @@
             }
             
             handleWalkMovement() {
-                const walkSpeed = 1.0; // 1 m/s walking speed
-                const runSpeed = 3.0;  // 3 m/s running speed
+                const walkSpeed = 1.5; // 1.5 m/s walking speed
+                const runSpeed = 4.0;  // 4 m/s running speed
                 const frameRate = 60;  // Assume 60 FPS
                 const baseSpeed = walkSpeed / frameRate; // Speed per frame
                 const fastSpeed = runSpeed / frameRate;
                 const moveSpeed = this.keys.shift ? fastSpeed : baseSpeed;
-                
-                if (!this.keys.w && !this.keys.a && !this.keys.s && !this.keys.d && !this.keys.q && !this.keys.e) {
+
+                if (!this.keys.w && !this.keys.a && !this.keys.s && !this.keys.d &&
+                    !this.keys.q && !this.keys.e && !this.keys.y && !this.keys.z && !this.keys.c) {
                     return; // No movement keys pressed
                 }
-                
-                // Get camera's forward and right vectors
-                const camera = this.camera;
+
+                // Get camera - use Potree camera if available
+                const camera = this.potreeViewer ? this.potreeViewer.scene.getActiveCamera() : this.camera;
                 const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
                 const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
                 const up = new THREE.Vector3(0, 0, 1); // World up direction (Z axis)
@@ -611,19 +1090,33 @@
                 if (this.keys.d) { // Right
                     movement.add(right.clone().multiplyScalar(moveSpeed));
                 }
-                if (this.keys.q) { // Up
+                if (this.keys.y || this.keys.z) { // Up (both Y and Z for German keyboard)
                     movement.add(up.clone().multiplyScalar(moveSpeed));
                 }
-                if (this.keys.e) { // Down
+                if (this.keys.c) { // Down
                     movement.add(up.clone().multiplyScalar(-moveSpeed));
+                }
+                
+                // Head rotation (left/right) - direct camera rotation for first-person view
+                const rotationSpeed = 0.02;
+                if (this.keys.q) { // Rotate left
+                    this.rotateCamera(rotationSpeed);
+                }
+                if (this.keys.e) { // Rotate right
+                    this.rotateCamera(-rotationSpeed);
                 }
                 
                 // Apply movement to camera
                 camera.position.add(movement);
-                
-                // Update rotation target to stay 2m in front of camera
-                this.updateRotationTarget();
-                this.controls.update();
+
+                // Update Potree view if using Potree viewer
+                if (this.potreeViewer) {
+                    this.potreeViewer.scene.view.position.copy(camera.position);
+                } else {
+                    // Update rotation target to stay 2m in front of camera
+                    this.updateRotationTarget();
+                    this.controls.update();
+                }
             }
             
             updateRotationTarget() {
@@ -632,6 +1125,26 @@
                 const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
                 const targetPosition = camera.position.clone().add(forward.multiplyScalar(2.0));
                 this.controls.target.copy(targetPosition);
+            }
+            
+            rotateCamera(angle) {
+                // Get the active camera
+                const camera = this.potreeViewer ? this.potreeViewer.scene.getActiveCamera() : this.camera;
+
+                // Rotate camera around its own Y axis (yaw) for first-person head rotation
+                // Create rotation quaternion around world Z axis (since Z is up)
+                const rotationQuaternion = new THREE.Quaternion();
+                rotationQuaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), angle);
+
+                // Apply rotation to camera's current quaternion
+                camera.quaternion.multiplyQuaternions(rotationQuaternion, camera.quaternion);
+
+                // Update Potree view or rotation target
+                if (this.potreeViewer) {
+                    this.potreeViewer.scene.view.rotation.copy(camera.rotation);
+                } else {
+                    this.updateRotationTarget();
+                }
             }
             
             setupSliceTool() {
@@ -1401,23 +1914,28 @@
                 formData.append('file', file);
                 
                 try {
-                    this.showStatus(`Uploading ${file.name}...`, 'success');
+                    // Show progress bar and hide status
+                    this.showProgress(0, `Uploading ${file.name}...`);
+                    document.getElementById('status').style.display = 'none';
                     
-                    const response = await fetch('/upload', {
-                        method: 'POST',
-                        body: formData
-                    });
+                    // Use XMLHttpRequest for upload progress tracking
+                    const result = await this.uploadWithProgress('/upload', formData);
                     
-                    const result = await response.json();
+                    this.showProgress(100, 'Processing complete!');
                     
-                    if (!response.ok) {
-                        throw new Error(result.detail || `HTTP error! status: ${response.status}`);
-                    }
-                    
-                    this.showStatus(`Uploaded successfully! ${result.vertex_count} vertices`, 'success');
+                    // Show loading progress for point cloud rendering
+                    this.showProgress(0, 'Loading point cloud...');
                     
                     // Load the point cloud
                     await this.loadPointCloud(result.file_id);
+                    
+                    this.showProgress(100, 'Point cloud loaded!');
+                    
+                    // Hide progress bar after a short delay and show success status
+                    setTimeout(() => {
+                        this.hideProgress();
+                        this.showStatus(`Uploaded successfully! ${result.vertex_count} vertices`, 'success');
+                    }, 500);
                     
                     // Refresh the point cloud list
                     this.loadPointCloudList();
@@ -1428,25 +1946,132 @@
                     
                 } catch (error) {
                     console.error('Upload error:', error);
+                    this.hideProgress();
                     this.showStatus(`Upload failed: ${error.message}`, 'error');
                 }
             }
             
+            uploadWithProgress(url, formData) {
+                return new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    
+                    // Track upload progress
+                    xhr.upload.addEventListener('progress', (e) => {
+                        if (e.lengthComputable) {
+                            const uploadProgress = (e.loaded / e.total) * 70; // Upload is 70% of total progress
+                            this.showProgress(uploadProgress, 'Uploading...');
+                        }
+                    });
+                    
+                    // Handle upload completion and processing
+                    xhr.addEventListener('load', () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            this.showProgress(70, 'Processing PLY file...');
+                            
+                            // Simulate processing progress (since backend processing is synchronous)
+                            this.simulateProcessingProgress(70, 100, () => {
+                                try {
+                                    const result = JSON.parse(xhr.responseText);
+                                    resolve(result);
+                                } catch (e) {
+                                    reject(new Error('Invalid JSON response'));
+                                }
+                            });
+                        } else {
+                            try {
+                                const error = JSON.parse(xhr.responseText);
+                                reject(new Error(error.detail || `HTTP error! status: ${xhr.status}`));
+                            } catch (e) {
+                                reject(new Error(`HTTP error! status: ${xhr.status}`));
+                            }
+                        }
+                    });
+                    
+                    xhr.addEventListener('error', () => {
+                        reject(new Error('Network error occurred'));
+                    });
+                    
+                    xhr.open('POST', url);
+                    xhr.send(formData);
+                });
+            }
+            
+            simulateProcessingProgress(startProgress, endProgress, onComplete) {
+                let currentProgress = startProgress;
+                const increment = (endProgress - startProgress) / 20; // 20 steps
+                
+                const updateProgress = () => {
+                    currentProgress += increment;
+                    this.showProgress(Math.min(currentProgress, endProgress), 'Processing PLY file...');
+                    
+                    if (currentProgress < endProgress) {
+                        setTimeout(updateProgress, 50); // Update every 50ms
+                    } else {
+                        onComplete();
+                    }
+                };
+                
+                updateProgress();
+            }
+            
+            showProgress(percentage, text) {
+                const progressContainer = document.getElementById('progressContainer');
+                const progressFill = document.getElementById('progressFill');
+                const progressText = document.getElementById('progressText');
+                
+                progressContainer.style.display = 'block';
+                progressFill.style.width = `${Math.round(percentage)}%`;
+                progressText.textContent = `${text} (${Math.round(percentage)}%)`;
+            }
+            
+            hideProgress() {
+                const progressContainer = document.getElementById('progressContainer');
+                const status = document.getElementById('status');
+                
+                progressContainer.style.display = 'none';
+                status.style.display = 'block';
+            }
+            
             async loadPointCloud(fileId) {
                 try {
+                    // Show progress bar for loading
+                    this.showProgress(0, 'Fetching point cloud data...');
+                    document.getElementById('status').style.display = 'none';
+                    
                     const response = await fetch(`/pointcloud/${fileId}`);
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     
+                    this.showProgress(50, 'Parsing point cloud data...');
                     const data = await response.json();
-                    this.displayPointCloud(data);
-                    this.showStatus(`Loaded ${data.vertex_count} points`, 'success');
+                    
+                    this.showProgress(75, 'Rendering point cloud...');
+                    await this.displayPointCloudWithProgress(data);
+                    
+                    this.showProgress(100, 'Point cloud loaded!');
+                    
+                    // Hide progress bar and show success status
+                    setTimeout(() => {
+                        this.hideProgress();
+                        this.showStatus(`Loaded ${data.vertex_count} points`, 'success');
+                    }, 300);
                     
                 } catch (error) {
                     console.error('Load error:', error);
+                    this.hideProgress();
                     this.showStatus(`Load failed: ${error.message}`, 'error');
                 }
+            }
+            
+            async displayPointCloudWithProgress(data) {
+                return new Promise((resolve) => {
+                    // Use setTimeout to allow progress update to render
+                    setTimeout(() => {
+                        this.displayPointCloud(data);
+                        resolve();
+                    }, 50);
+                });
             }
             
             displayPointCloud(data) {
@@ -1502,14 +2127,14 @@
                 try {
                     const response = await fetch('/pointclouds');
                     if (!response.ok) return;
-                    
+
                     const data = await response.json();
                     const listContainer = document.getElementById('pointCloudList');
-                    
+
                     // Clear existing list
                     const existingItems = listContainer.querySelectorAll('.point-cloud-item');
                     existingItems.forEach(item => item.remove());
-                    
+
                     // Add point clouds to list
                     data.point_clouds.forEach(pc => {
                         const item = document.createElement('div');
@@ -1517,7 +2142,7 @@
                         item.textContent = `${pc.file_id} (${pc.vertex_count} points)`;
                         item.addEventListener('click', () => {
                             // Remove active class from all items
-                            listContainer.querySelectorAll('.point-cloud-item').forEach(i => 
+                            listContainer.querySelectorAll('.point-cloud-item').forEach(i =>
                                 i.classList.remove('active'));
                             // Add active class to clicked item
                             item.classList.add('active');
@@ -1526,41 +2151,709 @@
                         });
                         listContainer.appendChild(item);
                     });
-                    
+
                 } catch (error) {
                     console.error('Failed to load point cloud list:', error);
                 }
             }
-            
+
+            async checkConfigAndLoad() {
+                try {
+                    const response = await fetch('/api/config');
+                    const config = await response.json();
+
+                    if (config.mode === 'potree') {
+                        // Hide upload UI - hide the file input and upload button specifically
+                        const fileInput = document.getElementById('fileInput');
+                        const uploadBtn = document.getElementById('uploadBtn');
+                        const progressContainer = document.getElementById('progressContainer');
+
+                        if (fileInput) fileInput.style.display = 'none';
+                        if (uploadBtn) uploadBtn.style.display = 'none';
+                        if (progressContainer) progressContainer.style.display = 'none';
+
+                        // Update the Files tab header to show Potree mode
+                        const filesTab = document.querySelector('[data-panel="files"]');
+                        const uploadHeader = filesTab ? filesTab.querySelector('h3') : null;
+                        if (uploadHeader) {
+                            uploadHeader.textContent = '☁️ Potree Point Cloud';
+                        }
+
+                        // Show potree info
+                        const listContainer = document.getElementById('pointCloudList');
+                        if (listContainer && listContainer.parentElement) {
+                            listContainer.parentElement.querySelector('h3').textContent = '☁️ Loaded Data';
+                            listContainer.innerHTML = `
+                                <div style="padding: 10px; color: #4CAF50; background: rgba(76, 175, 80, 0.1); border-radius: 4px;">
+                                    <strong>${config.potree_name}</strong><br>
+                                    <span style="font-size: 11px; color: #aaa;">Potree octree format with LOD</span>
+                                </div>
+                            `;
+                        }
+
+                        // Load Potree point cloud
+                        await this.loadPotreePointCloud();
+                    } else {
+                        // Upload mode - load list of uploaded clouds
+                        this.loadPointCloudList();
+                    }
+                } catch (error) {
+                    console.error('Failed to check config:', error);
+                    // Fallback to upload mode
+                    this.loadPointCloudList();
+                }
+            }
+
+            async loadPotreePointCloud() {
+                try {
+                    console.log('Initializing Potree viewer...');
+
+                    // Check if Potree library is loaded
+                    if (typeof Potree === 'undefined') {
+                        throw new Error('Potree library not loaded');
+                    }
+
+                    // Remove our existing renderer canvas
+                    const viewerElement = document.getElementById('viewer');
+                    const oldCanvas = viewerElement.querySelector('canvas');
+                    if (oldCanvas) oldCanvas.remove();
+
+                    // Create Potree.Viewer - it will create its own renderer
+                    this.potreeViewer = new Potree.Viewer(viewerElement);
+
+                    // Configure viewer
+                    this.potreeViewer.setEDLEnabled(false);
+                    this.potreeViewer.setFOV(75);
+                    this.potreeViewer.setPointBudget(2_000_000);
+                    this.potreeViewer.setBackground('black');
+
+                    // Replace our Three.js components with Potree's
+                    this.scene = this.potreeViewer.scene.scene;  // Potree's Three.js scene
+                    this.camera = this.potreeViewer.scene.getActiveCamera();
+                    this.renderer = this.potreeViewer.renderer;
+
+                    // Update controls to use Potree's camera and renderer
+                    if (this.controls) {
+                        this.controls.object = this.camera;
+                        this.controls.domElement = this.renderer.domElement;
+                    }
+
+                    console.log('Potree viewer initialized, loading point cloud...');
+
+                    // Load point cloud - try v1.7 format first, then v2.0
+                    let url = '/potree/cloud.js';  // Try v1.7 format
+
+                    Potree.loadPointCloud(url, "KP_Giesing", e => {
+                        const pointcloud = e.pointcloud;
+                        const material = pointcloud.material;
+
+                        // Configure material
+                        material.size = 1.0;
+                        material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+                        material.shape = Potree.PointShape.SQUARE;
+                        material.activeAttributeName = "rgba";
+
+                        console.log('Point cloud loaded:', pointcloud);
+                        console.log(`Bounding box:`, pointcloud.boundingBox);
+
+                        // Apply offset to center point cloud at origin with ground at Z=0
+                        const bbox = pointcloud.boundingBox;
+                        const centerX = (bbox.min.x + bbox.max.x) / 2;
+                        const centerY = (bbox.min.y + bbox.max.y) / 2;
+
+                        pointcloud.position.set(-centerX, -centerY, -bbox.min.z);
+
+                        console.log(`Point cloud centered with offset: (${-centerX.toFixed(1)}, ${-centerY.toFixed(1)}, ${-bbox.min.z.toFixed(1)})`);
+
+                        // Add to Potree scene using Potree's method
+                        this.potreeViewer.scene.addPointCloud(pointcloud);
+                        this.currentPointCloud = pointcloud;
+                        this.potreePointCloud = pointcloud;
+
+                        // Position camera
+                        const size = bbox.max.clone().sub(bbox.min);
+                        const maxSize = Math.max(size.x, size.y);
+
+                        this.camera.position.set(70, -70, 1.7);
+                        this.camera.up.set(0, 0, 1);
+                        this.camera.updateProjectionMatrix();
+
+                        // Set Potree view target
+                        this.potreeViewer.scene.view.position.copy(this.camera.position);
+                        this.potreeViewer.scene.view.lookAt(new THREE.Vector3(0, 0, 0));
+
+                        // Add custom grid and axes to Three.js scene
+                        const gridHelper = new THREE.GridHelper(maxSize * 1.5, 20, 0x444444, 0x222222);
+                        gridHelper.rotateX(Math.PI / 2);
+                        gridHelper.name = 'gridHelper';
+                        this.scene.add(gridHelper);
+
+                        const axesHelper = new THREE.AxesHelper(maxSize * 0.3);
+                        axesHelper.name = 'axesHelper';
+                        this.scene.add(axesHelper);
+
+                        this.updateHierarchy();
+                        this.showStatus(`Loaded Potree point cloud with ${pointcloud.visibleNodes?.length || 'auto'} LOD`, 'success');
+                    });
+
+                    // Also load metadata for custom LOD system (for M/N key controls)
+                    // Try Potree 1.7 format first (cloud.js), then Potree 2.0 (metadata.json)
+                    try {
+                        let metadataResponse = await fetch('/potree/cloud.js');
+                        if (!metadataResponse.ok) {
+                            // Try Potree 2.0 format
+                            metadataResponse = await fetch('/potree/pointclouds/index/metadata.json');
+                        }
+
+                        if (metadataResponse.ok) {
+                            const metadata = await metadataResponse.json();
+                            console.log('Loaded metadata for custom LOD system:', metadata);
+
+                            // Normalize metadata format (handle both 1.7 and 2.0 formats)
+                            if (metadata.version === "2.0") {
+                                // Potree 2.0 format - convert to our expected format
+                                this.potreeMetadata = {
+                                    boundingBox: {
+                                        lx: metadata.boundingBox.min[0],
+                                        ly: metadata.boundingBox.min[1],
+                                        lz: metadata.boundingBox.min[2],
+                                        ux: metadata.boundingBox.max[0],
+                                        uy: metadata.boundingBox.max[1],
+                                        uz: metadata.boundingBox.max[2]
+                                    },
+                                    scale: metadata.scale[0],  // Assume uniform scale
+                                    spacing: metadata.spacing
+                                };
+                            } else {
+                                // Potree 1.7 format - already in expected format
+                                this.potreeMetadata = metadata;
+                            }
+
+                            console.log('Custom LOD system ready (press M for more detail, N for less)');
+                        }
+                    } catch (metadataError) {
+                        console.warn('Could not load metadata for custom LOD system:', metadataError);
+                    }
+
+                } catch (error) {
+                    console.error('Failed to load Potree:', error);
+                    this.showStatus(`Failed to load Potree: ${error.message}`, 'error');
+                }
+            }
+
+            async loadInitialPotreeLODs() {
+                // Calculate offset based on metadata
+                const bbox = this.potreeMetadata.boundingBox;
+                const centerX = (bbox.lx + bbox.ux) / 2;
+                const centerY = (bbox.ly + bbox.uy) / 2;
+
+                // For X,Y: center them at origin
+                // For Z: put the GROUND (minimum Z) at Z=0
+                this.potreeOffset = {
+                    x: -centerX,
+                    y: -centerY,
+                    z: -bbox.lz  // Ground level at Z=0
+                };
+
+                const heightAboveGround = bbox.uz - bbox.lz;
+
+                console.log(`Positioning point cloud:`);
+                console.log(`  Ground (min Z) at Z=0`);
+                console.log(`  Height: ${heightAboveGround.toFixed(1)}m`);
+                console.log(`  Offset: (${this.potreeOffset.x.toFixed(1)}, ${this.potreeOffset.y.toFixed(1)}, ${this.potreeOffset.z.toFixed(1)})`);
+
+                // Load ONLY root node to verify it displays correctly
+                console.log(`Loading root node...`);
+
+                await this.loadPotreeNodeIfExists('r');
+
+                console.log(`Loaded root node successfully`);
+            }
+
+            setupPotreeLODUpdates() {
+                // Manual LOD control with M/N keys
+                console.log('Manual LOD control enabled: M = more detail, N = less detail');
+            }
+
+            async increaseLODDepth() {
+                if (this.currentLODDepth >= 6) {
+                    console.log('Already at maximum LOD depth (6)');
+                    this.showStatus('Maximum LOD depth reached', 'info');
+                    return;
+                }
+
+                this.currentLODDepth++;
+                console.log(`Increasing LOD depth to ${this.currentLODDepth}`);
+                this.showStatus(`LOD Depth: ${this.currentLODDepth}`, 'success');
+
+                // Load nodes for this depth
+                await this.loadNodesForDepth(this.currentLODDepth);
+
+                // Update visibility
+                this.updatePotreeNodeVisibility(this.currentLODDepth);
+            }
+
+            decreaseLODDepth() {
+                if (this.currentLODDepth <= 0) {
+                    console.log('Already at minimum LOD depth (0 = root only)');
+                    this.showStatus('Minimum LOD depth (root only)', 'info');
+                    return;
+                }
+
+                this.currentLODDepth--;
+                console.log(`Decreasing LOD depth to ${this.currentLODDepth}`);
+                this.showStatus(`LOD Depth: ${this.currentLODDepth}`, 'success');
+
+                // Update visibility to hide deeper nodes
+                this.updatePotreeNodeVisibility(this.currentLODDepth);
+            }
+
+            async loadNodesForDepth(depth) {
+                const nodesToLoad = [];
+
+                // Generate all node names up to this depth
+                const generateNodes = (prefix, currentDepth) => {
+                    nodesToLoad.push(prefix);
+
+                    if (currentDepth < depth) {
+                        for (let i = 0; i < 8; i++) {
+                            generateNodes(prefix + i, currentDepth + 1);
+                        }
+                    }
+                };
+
+                generateNodes('r', 0);
+
+                console.log(`Loading ${nodesToLoad.length} nodes for depth ${depth}...`);
+
+                // Load nodes that aren't already loaded
+                const promises = nodesToLoad
+                    .filter(name => !this.potreeLoadedNodes.has(name) && !this.potreeFailedNodes.has(name))
+                    .map(name => this.loadPotreeNodeIfExists(name));
+
+                await Promise.all(promises);
+
+                console.log(`Finished loading nodes for depth ${depth}`);
+            }
+
+            updatePotreeLOD() {
+                if (!this.potreeMetadata) return;
+
+                // Throttle updates
+                if (this.potreeLODUpdateTimeout) return;
+
+                this.potreeLODUpdateTimeout = setTimeout(() => {
+                    this.potreeLODUpdateTimeout = null;
+                    this.performPotreeLODUpdate();
+                }, 100);
+            }
+
+            async performPotreeLODUpdate() {
+                // Calculate which nodes should be visible based on camera distance
+                const cameraPos = this.camera.position;
+                const bbox = this.potreeMetadata.boundingBox;
+                const spacing = this.potreeMetadata.spacing;
+
+                // Calculate distance from camera to bounding box center
+                const centerX = (bbox.lx + bbox.ux) / 2;
+                const centerY = (bbox.ly + bbox.uy) / 2;
+                const centerZ = (bbox.lz + bbox.uz) / 2;
+
+                const dx = cameraPos.x - centerX;
+                const dy = cameraPos.y - centerY;
+                const dz = cameraPos.z - centerZ;
+                const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+                // Determine maximum depth based on distance
+                let maxDepth = 2; // minimum depth
+                if (distance < 100) maxDepth = 5;
+                else if (distance < 200) maxDepth = 4;
+                else if (distance < 400) maxDepth = 3;
+
+                // Load nodes up to maxDepth
+                const nodesToLoad = this.getPotreeNodesToLoad(maxDepth);
+
+                // Load any new nodes that aren't already loaded or loading
+                for (const nodeName of nodesToLoad) {
+                    if (!this.potreeLoadedNodes.has(nodeName) && !this.potreeLoading.has(nodeName)) {
+                        this.loadPotreeNodeIfExists(nodeName);
+                    }
+                }
+
+                // Update visibility of nodes based on LOD
+                this.updatePotreeNodeVisibility(maxDepth);
+            }
+
+            getPotreeNodesToLoad(maxDepth) {
+                const nodes = [];
+
+                // Generate node names up to maxDepth
+                const generateChildren = (parent, depth) => {
+                    if (depth > maxDepth) return;
+
+                    nodes.push(parent);
+
+                    for (let i = 0; i < 8; i++) {
+                        const childName = parent + i;
+                        generateChildren(childName, depth + 1);
+                    }
+                };
+
+                generateChildren('r', 0);
+                return nodes;
+            }
+
+            updatePotreeNodeVisibility(maxDepth) {
+                // ADDITIVE LOD: Show ALL nodes up to and including maxDepth
+                // Higher LODs add detail, they don't replace lower LODs
+                for (const [nodeName, pointsObj] of this.potreeNodes) {
+                    const depth = nodeName.length - 1;
+
+                    // Simple additive rule: show if depth <= maxDepth
+                    const shouldShow = (depth <= maxDepth);
+                    pointsObj.visible = shouldShow;
+
+                    // Debug logging for first two levels
+                    if (nodeName.length <= 2) {
+                        console.log(`  Node ${nodeName} (depth ${depth}): visible=${shouldShow}`);
+                    }
+                }
+            }
+
+            /**
+             * Calculate the bounding box for a specific octree node based on its name.
+             * In an octree, each child occupies one octant (1/8th) of its parent's space.
+             * The octant is determined by the last digit in the node name:
+             *   0 (000): x-, y-, z-    4 (100): x-, y-, z+
+             *   1 (001): x+, y-, z-    5 (101): x+, y-, z+
+             *   2 (010): x-, y+, z-    6 (110): x-, y+, z+
+             *   3 (011): x+, y+, z-    7 (111): x+, y+, z+
+             * where x+ means upper half in x direction, x- means lower half, etc.
+             */
+            getNodeBoundingBox(nodeName) {
+                const rootBbox = this.potreeMetadata.boundingBox;
+
+                // Root node uses the full bounding box
+                if (nodeName === 'r') {
+                    return {
+                        lx: rootBbox.lx,
+                        ly: rootBbox.ly,
+                        lz: rootBbox.lz,
+                        ux: rootBbox.ux,
+                        uy: rootBbox.uy,
+                        uz: rootBbox.uz
+                    };
+                }
+
+                // Start with root bounding box
+                let bbox = {
+                    lx: rootBbox.lx,
+                    ly: rootBbox.ly,
+                    lz: rootBbox.lz,
+                    ux: rootBbox.ux,
+                    uy: rootBbox.uy,
+                    uz: rootBbox.uz
+                };
+
+                // Remove the 'r' prefix to get the octant path
+                const octantPath = nodeName.substring(1);
+
+                // Traverse the octree hierarchy, subdividing at each level
+                for (let i = 0; i < octantPath.length; i++) {
+                    const octant = parseInt(octantPath[i]);
+
+                    // Calculate midpoints
+                    const midX = (bbox.lx + bbox.ux) / 2;
+                    const midY = (bbox.ly + bbox.uy) / 2;
+                    const midZ = (bbox.lz + bbox.uz) / 2;
+
+                    // Subdivide based on octant bits:
+                    // bit 0 (octant & 1): x direction
+                    // bit 1 (octant & 2): y direction
+                    // bit 2 (octant & 4): z direction
+
+                    if (octant & 1) {  // x+ (upper half in x)
+                        bbox.lx = midX;
+                    } else {  // x- (lower half in x)
+                        bbox.ux = midX;
+                    }
+
+                    if (octant & 2) {  // y+ (upper half in y)
+                        bbox.ly = midY;
+                    } else {  // y- (lower half in y)
+                        bbox.uy = midY;
+                    }
+
+                    if (octant & 4) {  // z+ (upper half in z)
+                        bbox.lz = midZ;
+                    } else {  // z- (lower half in z)
+                        bbox.uz = midZ;
+                    }
+                }
+
+                return bbox;
+            }
+
+            async loadPotreeNodeIfExists(nodeName) {
+                console.log(`Attempting to load node: ${nodeName}`);
+
+                // Check if already loaded, loading, or previously failed
+                if (this.potreeLoadedNodes.has(nodeName) ||
+                    this.potreeLoading.has(nodeName) ||
+                    this.potreeFailedNodes.has(nodeName)) {
+                    console.log(`  Skipping ${nodeName} (already processed)`);
+                    return;
+                }
+
+                this.potreeLoading.add(nodeName);
+
+                try {
+                    // Load the octree node data
+                    // All nodes are in data/r/ directory with .bin extension
+                    console.log(`  Fetching /potree/data/r/${nodeName}.bin`);
+                    const response = await fetch(`/potree/data/r/${nodeName}.bin`);
+
+                    if (!response.ok) {
+                        // Node doesn't exist, mark as failed and skip
+                        this.potreeLoading.delete(nodeName);
+                        this.potreeFailedNodes.add(nodeName);
+                        return;
+                    }
+
+                    const buffer = await response.arrayBuffer();
+
+                    // Parse binary data based on Potree format
+                    const view = new DataView(buffer);
+                    const numPoints = buffer.byteLength / 16; // Each point is 16 bytes
+
+                    const vertices = [];
+                    const colors = [];
+
+                    const scale = this.potreeMetadata.scale;
+                    // Calculate the correct bounding box for this specific node
+                    const bbox = this.getNodeBoundingBox(nodeName);
+
+                    // Debug: Log bounding box for verification
+                    const depth = nodeName.length - 1;
+                    if (depth <= 2) {
+                        console.log(`Node ${nodeName} bbox: X[${bbox.lx.toFixed(1)}, ${bbox.ux.toFixed(1)}] Y[${bbox.ly.toFixed(1)}, ${bbox.uy.toFixed(1)}] Z[${bbox.lz.toFixed(1)}, ${bbox.uz.toFixed(1)}]`);
+                    }
+
+                    // Read points
+                    for (let i = 0; i < numPoints; i++) {
+                        const offset = i * 16;
+
+                        // Read position (3 x int32) and apply centering offset
+                        let x = view.getInt32(offset, true) * scale + bbox.lx;
+                        let y = view.getInt32(offset + 4, true) * scale + bbox.ly;
+                        let z = view.getInt32(offset + 8, true) * scale + bbox.lz;
+
+                        // Center at origin
+                        if (this.potreeOffset) {
+                            x += this.potreeOffset.x;
+                            y += this.potreeOffset.y;
+                            z += this.potreeOffset.z;
+                        }
+
+                        // Read color (4 x uint8 - RGBA)
+                        const r = view.getUint8(offset + 12) / 255.0;
+                        const g = view.getUint8(offset + 13) / 255.0;
+                        const b = view.getUint8(offset + 14) / 255.0;
+
+                        vertices.push(x, y, z);
+                        colors.push(r, g, b);
+                    }
+
+                    console.log(`  Parsed ${numPoints} points for ${nodeName}, vertices.length=${vertices.length}`);
+
+                    // Calculate and display actual bounding box of loaded points for verification
+                    if (depth <= 2 && vertices.length > 0) {
+                        let minX = vertices[0], maxX = vertices[0];
+                        let minY = vertices[1], maxY = vertices[1];
+                        let minZ = vertices[2], maxZ = vertices[2];
+
+                        for (let i = 3; i < vertices.length; i += 3) {
+                            if (vertices[i] < minX) minX = vertices[i];
+                            if (vertices[i] > maxX) maxX = vertices[i];
+                            if (vertices[i+1] < minY) minY = vertices[i+1];
+                            if (vertices[i+1] > maxY) maxY = vertices[i+1];
+                            if (vertices[i+2] < minZ) minZ = vertices[i+2];
+                            if (vertices[i+2] > maxZ) maxZ = vertices[i+2];
+                        }
+
+                        console.log(`  Actual points bbox: X[${minX.toFixed(1)}, ${maxX.toFixed(1)}] Y[${minY.toFixed(1)}, ${maxY.toFixed(1)}] Z[${minZ.toFixed(1)}, ${maxZ.toFixed(1)}]`);
+                    }
+
+                    // Create point cloud geometry
+                    const geometry = new THREE.BufferGeometry();
+                    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
+                    geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 3));
+
+                    // Calculate point size based on LOD level (depth already declared above)
+                    const pointSize = 0.05 * Math.pow(0.8, depth); // Smaller points for deeper LODs
+
+                    const material = new THREE.PointsMaterial({
+                        size: pointSize,
+                        vertexColors: true,
+                        sizeAttenuation: true
+                    });
+
+                    const pointsObj = new THREE.Points(geometry, material);
+                    pointsObj.name = `potree_${nodeName}`;
+
+                    // Add to scene
+                    this.scene.add(pointsObj);
+
+                    // Track the node
+                    this.potreeNodes.set(nodeName, pointsObj);
+                    this.potreeLoadedNodes.add(nodeName);
+                    this.potreeLoading.delete(nodeName);
+
+                    console.log(`Loaded node ${nodeName}: ${numPoints} points, depth ${depth}`);
+
+                    // Position camera on first load
+                    if (nodeName === 'r' && !this.cameraInitialized) {
+                        this.cameraInitialized = true;
+
+                        const sizeX = bbox.ux - bbox.lx;
+                        const sizeY = bbox.uy - bbox.ly;
+                        const sizeZ = bbox.uz - bbox.lz;  // Height of structure
+                        const maxSize = Math.max(sizeX, sizeY);
+
+                        // Position camera to view the structure
+                        // Point cloud is centered on X,Y and has ground at Z=0
+                        // Start at human eye level (1.7m) about 70m away
+                        this.camera.position.set(
+                            70,    // 70m to the right
+                            -70,   // 70m to the back
+                            1.7    // Human eye level
+                        );
+
+                        // Look at ground level in front of camera
+                        this.controls.target.set(0, 0, 0);
+                        this.controls.update();
+
+                        // Grid and axes at ground level (Z=0)
+                        this.updateGridAndAxes(0, 0, 0, maxSize);
+
+                        console.log(`Camera at (${this.camera.position.x.toFixed(1)}, ${this.camera.position.y.toFixed(1)}, ${this.camera.position.z.toFixed(1)})`);
+                        console.log(`Looking at origin (0, 0, 0)`);
+                        console.log(`Structure height: ${sizeZ.toFixed(1)}m, ground at Z=0`);
+                    }
+
+                } catch (error) {
+                    // Log the error so we can see what's failing
+                    console.error(`ERROR loading node ${nodeName}:`, error);
+                    this.potreeLoading.delete(nodeName);
+                    this.potreeFailedNodes.add(nodeName);
+                }
+            }
+
+            updateGridAndAxes(centerX, centerY, centerZ, size) {
+                // Remove old grid and axes if they exist
+                const oldGrid = this.scene.getObjectByName('gridHelper');
+                const oldAxes = this.scene.getObjectByName('axesHelper');
+                if (oldGrid) this.scene.remove(oldGrid);
+                if (oldAxes) this.scene.remove(oldAxes);
+
+                // Create new grid helper at the point cloud location
+                const gridSize = size * 1.5;
+                const gridHelper = new THREE.GridHelper(gridSize, 20, 0x444444, 0x222222);
+                gridHelper.position.set(centerX, centerY, centerZ);
+                gridHelper.rotateX(Math.PI / 2); // Rotate to lie in X-Y plane
+                // NO Z rotation - grid matches coordinate system
+                gridHelper.name = 'gridHelper';
+                this.scene.add(gridHelper);
+
+                // Create new axes helper at the point cloud center
+                // Red=+X (right), Green=+Y (forward), Blue=+Z (up)
+                const axesHelper = new THREE.AxesHelper(size * 0.3);
+                axesHelper.position.set(centerX, centerY, centerZ);
+                // NO rotation - axes match coordinate system directly
+                axesHelper.name = 'axesHelper';
+                this.scene.add(axesHelper);
+
+                console.log(`Grid and axes positioned at (${centerX.toFixed(1)}, ${centerY.toFixed(1)}, ${centerZ.toFixed(1)})`);
+
+                // Update hierarchy to show new helpers
+                this.updateHierarchy();
+            }
+
             showStatus(message, type) {
                 const status = document.getElementById('status');
                 status.textContent = message;
                 status.className = type;
                 status.style.display = 'block';
-                
+
                 setTimeout(() => {
                     status.style.display = 'none';
                 }, 3000);
             }
-            
+
             animate() {
                 requestAnimationFrame(() => this.animate());
-                
+
                 this.handleWalkMovement(); // Handle keyboard-based walk movement
-                this.controls.update();
-                this.renderer.render(this.scene, this.camera);
+
+                // Use Potree's rendering if viewer exists
+                if (this.potreeViewer) {
+                    this.potreeViewer.update(this.clock.getDelta(), performance.now());
+                    this.potreeViewer.render();
+                } else {
+                    // Fallback to our own rendering (upload mode)
+                    this.controls.update();
+                    this.renderer.render(this.scene, this.camera);
+                }
+
+                // Update position display
+                this.updatePositionDisplay();
+            }
+
+            updatePositionDisplay() {
+                const camX = document.getElementById('camX');
+                const camY = document.getElementById('camY');
+                const camZ = document.getElementById('camZ');
+                const lodDepth = document.getElementById('lodDepth');
+                const lodNodes = document.getElementById('lodNodes');
+
+                if (camX) camX.textContent = this.camera.position.x.toFixed(1);
+                if (camY) camY.textContent = this.camera.position.y.toFixed(1);
+                if (camZ) camZ.textContent = this.camera.position.z.toFixed(1);
+
+                if (lodDepth) lodDepth.textContent = this.currentLODDepth || 0;
+                if (lodNodes) lodNodes.textContent = this.potreeLoadedNodes ? this.potreeLoadedNodes.size : 0;
             }
             
+            getViewportWidth() {
+                // Calculate viewport width excluding left and right panes
+                const leftPane = document.getElementById('leftPane');
+                const rightPane = document.getElementById('rightPane');
+                const leftWidth = leftPane ? leftPane.offsetWidth : 320;
+                const rightWidth = rightPane ? rightPane.offsetWidth : 400;
+                return window.innerWidth - leftWidth - rightWidth;
+            }
+
+            getViewportHeight() {
+                return window.innerHeight;
+            }
+
             onWindowResize() {
-                this.camera.aspect = window.innerWidth / window.innerHeight;
+                const viewportWidth = this.getViewportWidth();
+                const viewportHeight = this.getViewportHeight();
+
+                this.camera.aspect = viewportWidth / viewportHeight;
                 this.camera.updateProjectionMatrix();
-                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setSize(viewportWidth, viewportHeight);
             }
         }
         
         // Initialize the viewer when the page loads
         window.addEventListener('DOMContentLoaded', () => {
-            new PointCloudViewer();
+            // Initialize tab system first
+            window.tabManager = new TabManager();
+            
+            // Then initialize point cloud viewer
+            window.pointCloudViewer = new PointCloudViewer();
         });
     </script>
 </body>
