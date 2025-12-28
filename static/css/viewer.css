@@ -9,7 +9,7 @@ body {
         }
         
         #leftPane {
-            width: 320px;
+            width: 380px;
             height: 100vh;
             background: rgba(0, 0, 0, 0.9);
             border-right: 1px solid #333;
@@ -434,4 +434,90 @@ body {
             left: 0;
             right: 0;
             display: none;
+        }
+
+        /* Edit Mode Styles */
+        .edit-button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 13px;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .edit-button:hover {
+            background: #1976D2;
+        }
+
+        .edit-button.active {
+            background: #4CAF50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+
+        .edit-button.danger {
+            background: #f44336;
+        }
+
+        .edit-button.danger:hover {
+            background: #d32f2f;
+        }
+
+        .edit-status {
+            background: #4CAF50;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .edit-info {
+            font-size: 12px;
+            color: #aaa;
+            line-height: 1.6;
+        }
+
+        .edit-info kbd {
+            background: #333;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            border: 1px solid #555;
+        }
+
+        .selection-status {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .edit-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .history-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .history-controls .edit-button {
+            flex: 1;
+            margin-bottom: 0;
         }

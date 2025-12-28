@@ -13,6 +13,7 @@
                 <div class="tab" data-tab="files">📁 Files</div>
                 <div class="tab" data-tab="controls">🎮 Controls</div>
                 <div class="tab" data-tab="slice">✂️ Slice</div>
+                <div class="tab" data-tab="edit">🖌️ Edit</div>
             </div>
             <div class="tab-content">
                 <!-- Files Tab -->
@@ -71,6 +72,7 @@
                             • Y or Z: Move UP (vertical)<br>
                             • C: Move DOWN (vertical)<br>
                             • Q/E: Turn head left/right<br>
+                            • F/V: Look up/down (pitch)<br>
                             • Shift: Run (4 m/s vs 1.5 m/s)<br>
                             <br>
                             <strong>Level of Detail:</strong><br>
@@ -93,6 +95,73 @@
                         </div>
                         <div class="slice-list" id="sliceList">
                             <!-- Slice items will be added here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Tab -->
+                <div class="tab-panel" data-panel="edit">
+                    <div class="tool-section">
+                        <h3>🖌️ Brush Selection</h3>
+                        <button id="editModeBtn" class="edit-button" onclick="window.pointCloudViewer?.selectionManager?.toggleEditMode()">Enter Edit Mode (T)</button>
+                        <div id="editStatus" class="edit-status" style="display: none;">EDIT MODE</div>
+                        <div class="edit-info">
+                            <div style="margin: 10px 0;">
+                                <strong>Brush Size:</strong> <span id="brushSize">0.50m</span>
+                            </div>
+                            <div style="font-size: 11px; color: #888; line-height: 1.6;">
+                                • Press <kbd>T</kbd> to toggle edit mode<br>
+                                • <strong>Scroll</strong> to resize brush<br>
+                                • <strong>Click + drag</strong> to select points<br>
+                                • Points in brush glow light green<br>
+                                • Shadow shows brush position on ground
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tool-section">
+                        <h3>📊 Selection</h3>
+                        <div id="selectionStatus" class="selection-status">No selection</div>
+                        <div id="nodeStats" style="font-size: 11px; color: #888; margin: 8px 0;">
+                            Nodes: <span id="loadedNodesCount">0</span> |
+                            Total points: <span id="totalPointsCount">0</span>
+                        </div>
+                        <div class="edit-actions">
+                            <button id="deleteSelectedBtn" class="edit-button danger" onclick="window.pointCloudViewer?.selectionManager?.deleteSelectedPoints()">
+                                Delete Selected (⌫)
+                            </button>
+                            <button id="clearSelectionBtn" class="edit-button" onclick="window.pointCloudViewer?.selectionManager?.clearSelection()">
+                                Clear Selection (Esc)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="tool-section">
+                        <h3>↩️ History</h3>
+                        <div class="history-controls">
+                            <button id="undoBtn" class="edit-button" onclick="window.pointCloudViewer?.selectionManager?.undo()">
+                                Undo (Ctrl+Z)
+                            </button>
+                            <button id="redoBtn" class="edit-button" onclick="window.pointCloudViewer?.selectionManager?.redo()">
+                                Redo (Ctrl+Y)
+                            </button>
+                        </div>
+                        <div style="font-size: 11px; color: #888; margin-top: 8px;">
+                            Undo stack: <span id="undoCount">0</span> operations
+                        </div>
+                    </div>
+
+                    <div class="tool-section">
+                        <h3>🎮 Controls Summary</h3>
+                        <div class="controls-info" style="font-size: 11px;">
+                            <strong>Edit Mode:</strong><br>
+                            • T: Toggle edit mode<br>
+                            • Click + drag: Paint selection<br>
+                            • Scroll: Resize brush<br>
+                            • Backspace/Delete: Delete selected<br>
+                            • Ctrl+Z: Undo<br>
+                            • Ctrl+Y: Redo<br>
+                            • Escape: Clear selection
                         </div>
                     </div>
                 </div>
@@ -174,6 +243,7 @@
 
     <!-- Application scripts -->
     <script src="/static/js/tab-manager.js"></script>
+    <script src="/static/js/edit/selection-manager.js"></script>
     <script src="/static/js/point-cloud-viewer.js"></script>
 
     <script>

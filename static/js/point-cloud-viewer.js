@@ -42,6 +42,7 @@
                 this.setupWalkControls();
                 this.setupSliceTool();
                 this.setupSliceView();
+                this.setupSelectionManager(); // Initialize selection/edit system
                 this.checkConfigAndLoad(); // Check mode and load accordingly
                 this.updateHierarchy();
             }
@@ -126,6 +127,12 @@
                         case 'KeyC':
                             this.keys.c = true;
                             break;
+                        case 'KeyF':
+                            this.keys.f = true;
+                            break;
+                        case 'KeyV':
+                            this.keys.v = true;
+                            break;
                         case 'ShiftLeft':
                         case 'ShiftRight':
                             this.keys.shift = true;
@@ -170,6 +177,12 @@
                         case 'KeyC':
                             this.keys.c = false;
                             break;
+                        case 'KeyF':
+                            this.keys.f = false;
+                            break;
+                        case 'KeyV':
+                            this.keys.v = false;
+                            break;
                         case 'ShiftLeft':
                         case 'ShiftRight':
                             this.keys.shift = false;
@@ -187,7 +200,8 @@
                 const moveSpeed = this.keys.shift ? fastSpeed : baseSpeed;
 
                 if (!this.keys.w && !this.keys.a && !this.keys.s && !this.keys.d &&
-                    !this.keys.q && !this.keys.e && !this.keys.y && !this.keys.z && !this.keys.c) {
+                    !this.keys.q && !this.keys.e && !this.keys.y && !this.keys.z && !this.keys.c &&
+                    !this.keys.f && !this.keys.v) {
                     return; // No movement keys pressed
                 }
 
@@ -221,13 +235,21 @@
                 
                 // Head rotation (left/right) - direct camera rotation for first-person view
                 const rotationSpeed = 0.02;
-                if (this.keys.q) { // Rotate left
+                if (this.keys.q) { // Rotate left (yaw)
                     this.rotateCamera(rotationSpeed);
                 }
-                if (this.keys.e) { // Rotate right
+                if (this.keys.e) { // Rotate right (yaw)
                     this.rotateCamera(-rotationSpeed);
                 }
-                
+
+                // Pitch rotation (up/down) - look up/down
+                if (this.keys.f) { // Pitch up
+                    this.pitchCamera(rotationSpeed);
+                }
+                if (this.keys.v) { // Pitch down
+                    this.pitchCamera(-rotationSpeed);
+                }
+
                 // Apply movement to camera
                 camera.position.add(movement);
 
@@ -263,7 +285,39 @@
 
                 // Update Potree view or rotation target
                 if (this.potreeViewer) {
-                    this.potreeViewer.scene.view.rotation.copy(camera.rotation);
+                    // Potree view may not have rotation property, use yaw instead
+                    const view = this.potreeViewer.scene.view;
+                    if (view && view.yaw !== undefined) {
+                        view.yaw += angle;
+                    }
+                } else {
+                    this.updateRotationTarget();
+                }
+            }
+
+            pitchCamera(angle) {
+                // Get the active camera
+                const camera = this.potreeViewer ? this.potreeViewer.scene.getActiveCamera() : this.camera;
+
+                // Get the camera's local right axis to rotate around (for pitch)
+                const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+
+                // Create rotation quaternion around the camera's right axis
+                const rotationQuaternion = new THREE.Quaternion();
+                rotationQuaternion.setFromAxisAngle(right, angle);
+
+                // Apply rotation to camera's current quaternion
+                camera.quaternion.multiplyQuaternions(rotationQuaternion, camera.quaternion);
+
+                // Update Potree view or rotation target
+                if (this.potreeViewer) {
+                    // Potree view uses pitch property
+                    const view = this.potreeViewer.scene.view;
+                    if (view && view.pitch !== undefined) {
+                        view.pitch += angle;
+                        // Clamp pitch to prevent flipping (approximately -90 to +90 degrees)
+                        view.pitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, view.pitch));
+                    }
                 } else {
                     this.updateRotationTarget();
                 }
@@ -1396,7 +1450,7 @@
                         const size = bbox.max.clone().sub(bbox.min);
                         const maxSize = Math.max(size.x, size.y);
 
-                        this.camera.position.set(70, -70, 1.7);
+                        this.camera.position.set(54, -61.3, 15.4);
                         this.camera.up.set(0, 0, 1);
                         this.camera.updateProjectionMatrix();
 
@@ -1823,6 +1877,11 @@
                     const pointsObj = new THREE.Points(geometry, material);
                     pointsObj.name = `potree_${nodeName}`;
 
+                    // Store original positions/colors for undo functionality
+                    if (this.selectionManager) {
+                        this.selectionManager.storeOriginalPositions(pointsObj);
+                    }
+
                     // Add to scene
                     this.scene.add(pointsObj);
 
@@ -1844,12 +1903,7 @@
 
                         // Position camera to view the structure
                         // Point cloud is centered on X,Y and has ground at Z=0
-                        // Start at human eye level (1.7m) about 70m away
-                        this.camera.position.set(
-                            70,    // 70m to the right
-                            -70,   // 70m to the back
-                            1.7    // Human eye level
-                        );
+                        this.camera.position.set(54, -61.3, 15.4);
 
                         // Look at ground level in front of camera
                         this.controls.target.set(0, 0, 0);
@@ -1868,6 +1922,17 @@
                     console.error(`ERROR loading node ${nodeName}:`, error);
                     this.potreeLoading.delete(nodeName);
                     this.potreeFailedNodes.add(nodeName);
+                }
+            }
+
+            setupSelectionManager() {
+                // Initialize the selection manager for edit mode
+                // SelectionManager is loaded from edit/selection-manager.js
+                if (typeof SelectionManager !== 'undefined') {
+                    this.selectionManager = new SelectionManager(this);
+                    console.log('SelectionManager initialized - Press E to toggle edit mode');
+                } else {
+                    console.warn('SelectionManager not loaded - edit features unavailable');
                 }
             }
 
