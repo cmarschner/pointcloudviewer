@@ -145,6 +145,14 @@
                             // Decrease LOD depth (less detail)
                             this.decreaseLODDepth();
                             break;
+                        case 'Digit1':
+                            // Decrease point size
+                            this.adjustPointSize(-0.2);
+                            break;
+                        case 'Digit2':
+                            // Increase point size
+                            this.adjustPointSize(0.2);
+                            break;
                     }
                 });
                 
@@ -272,46 +280,34 @@
             }
             
             rotateCamera(angle) {
-                // Get the active camera
-                const camera = this.potreeViewer ? this.potreeViewer.scene.getActiveCamera() : this.camera;
-
-                // Rotate camera around its own Y axis (yaw) for first-person head rotation
-                // Create rotation quaternion around world Z axis (since Z is up)
-                const rotationQuaternion = new THREE.Quaternion();
-                rotationQuaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), angle);
-
-                // Apply rotation to camera's current quaternion
-                camera.quaternion.multiplyQuaternions(rotationQuaternion, camera.quaternion);
-
                 // Update Potree view or rotation target
                 if (this.potreeViewer) {
-                    // Potree view may not have rotation property, use yaw instead
+                    // Only modify Potree view yaw - don't touch camera quaternion directly
+                    // as Potree manages the camera itself
                     const view = this.potreeViewer.scene.view;
                     if (view && view.yaw !== undefined) {
                         view.yaw += angle;
                     }
                 } else {
+                    // Non-Potree mode: rotate camera directly
+                    const camera = this.camera;
+
+                    // Create rotation quaternion around world Z axis (since Z is up)
+                    const rotationQuaternion = new THREE.Quaternion();
+                    rotationQuaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), angle);
+
+                    // Apply rotation to camera's current quaternion
+                    camera.quaternion.multiplyQuaternions(rotationQuaternion, camera.quaternion);
+
                     this.updateRotationTarget();
                 }
             }
 
             pitchCamera(angle) {
-                // Get the active camera
-                const camera = this.potreeViewer ? this.potreeViewer.scene.getActiveCamera() : this.camera;
-
-                // Get the camera's local right axis to rotate around (for pitch)
-                const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-
-                // Create rotation quaternion around the camera's right axis
-                const rotationQuaternion = new THREE.Quaternion();
-                rotationQuaternion.setFromAxisAngle(right, angle);
-
-                // Apply rotation to camera's current quaternion
-                camera.quaternion.multiplyQuaternions(rotationQuaternion, camera.quaternion);
-
                 // Update Potree view or rotation target
                 if (this.potreeViewer) {
-                    // Potree view uses pitch property
+                    // Only modify Potree view pitch - don't touch camera quaternion directly
+                    // as Potree manages the camera itself
                     const view = this.potreeViewer.scene.view;
                     if (view && view.pitch !== undefined) {
                         view.pitch += angle;
@@ -319,6 +315,19 @@
                         view.pitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, view.pitch));
                     }
                 } else {
+                    // Non-Potree mode: rotate camera directly
+                    const camera = this.camera;
+
+                    // Get the camera's local right axis to rotate around (for pitch)
+                    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+
+                    // Create rotation quaternion around the camera's right axis
+                    const rotationQuaternion = new THREE.Quaternion();
+                    rotationQuaternion.setFromAxisAngle(right, angle);
+
+                    // Apply rotation to camera's current quaternion
+                    camera.quaternion.multiplyQuaternions(rotationQuaternion, camera.quaternion);
+
                     this.updateRotationTarget();
                 }
             }
@@ -1584,6 +1593,31 @@
                 this.updatePotreeNodeVisibility(this.currentLODDepth);
             }
 
+            adjustPointSize(delta) {
+                // Adjust point size for Potree point clouds
+                // Minimum 0.1, maximum 5.0
+                const MIN_SIZE = 0.1;
+                const MAX_SIZE = 5.0;
+
+                // Get current point size from Potree material
+                let currentSize = 1.0;
+                if (this.potreePointCloud && this.potreePointCloud.material) {
+                    currentSize = this.potreePointCloud.material.size;
+                }
+
+                let newSize = Math.max(MIN_SIZE, Math.min(MAX_SIZE, currentSize + delta));
+
+                // Apply to Potree point cloud material
+                if (this.potreePointCloud && this.potreePointCloud.material) {
+                    this.potreePointCloud.material.size = newSize;
+                    console.log(`Point size: ${newSize.toFixed(2)}`);
+                    this.showStatus(`Point size: ${newSize.toFixed(2)}`, 'info');
+                } else {
+                    console.log('No Potree point cloud loaded');
+                    this.showStatus('No point cloud loaded', 'error');
+                }
+            }
+
             async loadNodesForDepth(depth) {
                 const nodesToLoad = [];
 
@@ -1831,10 +1865,21 @@
                             z += this.potreeOffset.z;
                         }
 
-                        // Read color (4 x uint8 - RGBA)
-                        const r = view.getUint8(offset + 12) / 255.0;
-                        const g = view.getUint8(offset + 13) / 255.0;
-                        const b = view.getUint8(offset + 14) / 255.0;
+                        // Read color (4 x uint8 - stored as BGRA in Potree 1.7 format)
+                        let b = view.getUint8(offset + 12) / 255.0;
+                        let g = view.getUint8(offset + 13) / 255.0;
+                        let r = view.getUint8(offset + 14) / 255.0;
+
+                        // Convert "laser scanner red" to grey
+                        // When there's no ambient light, scanner shows red from laser reflection
+                        // Detect: high red, very low green and blue
+                        if (r > 0.4 && g < 0.15 && b < 0.15) {
+                            // Convert to grey based on red intensity
+                            const grey = r * 0.5;  // Darken it since these are low-light areas
+                            r = grey;
+                            g = grey;
+                            b = grey;
+                        }
 
                         vertices.push(x, y, z);
                         colors.push(r, g, b);
@@ -1865,8 +1910,9 @@
                     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
                     geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 3));
 
-                    // Calculate point size based on LOD level (depth already declared above)
-                    const pointSize = 0.05 * Math.pow(0.8, depth); // Smaller points for deeper LODs
+                    // Use stored point size if set, otherwise calculate based on LOD level
+                    const defaultPointSize = 0.05 * Math.pow(0.8, depth); // Smaller points for deeper LODs
+                    const pointSize = this.potreePointSize || defaultPointSize;
 
                     const material = new THREE.PointsMaterial({
                         size: pointSize,

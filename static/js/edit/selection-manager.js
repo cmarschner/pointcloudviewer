@@ -319,6 +319,10 @@ class SelectionManager {
 
             // Update stats display
             this.updateNodeStats();
+
+            // Show debug info panel
+            const debugInfo = document.getElementById('brushDebugInfo');
+            if (debugInfo) debugInfo.style.display = 'block';
         } else {
             // Re-enable orbit controls
             if (this.viewer.controls) {
@@ -356,6 +360,10 @@ class SelectionManager {
 
             // Remove visual overlay
             this.showEditModeOverlay(false);
+
+            // Hide debug info panel
+            const debugInfo = document.getElementById('brushDebugInfo');
+            if (debugInfo) debugInfo.style.display = 'none';
 
             console.log('Edit mode: OFF');
         }
@@ -501,6 +509,12 @@ class SelectionManager {
             nodesContainingBrush: 0
         };
 
+        // Per-node match stats for debug display
+        const nodeMatches = [];
+
+        // Track processed nodes to avoid duplicates
+        const processedNodes = new Set();
+
         /**
          * Check if a bounding box (in world coords) intersects the brush query region
          * The query region is: XY cylinder of radius `radius` centered at brush, extending down to -infinity in Z
@@ -556,33 +570,26 @@ class SelectionManager {
          * Process points from a scene node
          * Points in geometry are in local space - we need to transform them to world space
          * using the scene node's world matrix, not just the point cloud offset
+         * @param {boolean} wouldBeCulled - whether this node would have been culled by bbox test
          */
-        const processNodePoints = (sceneNode, name) => {
+        const processNodePoints = (sceneNode, name, wouldBeCulled = false) => {
+            // Skip if already processed
+            if (processedNodes.has(name)) return;
+            processedNodes.add(name);
+
             const positionData = this.getNodePositionData(sceneNode);
             if (!positionData) return;
 
             const { positions, pointCount } = positionData;
             stats.nodesChecked++;
 
+            // Per-node counters for debug display
+            let nodeHighlight = 0;
+            let nodeShadow = 0;
+
             // Get the world matrix for this scene node to transform local points to world
             // This includes all parent transformations in the scene graph
             const worldMatrix = sceneNode.matrixWorld;
-
-            // Debug: log first node's transformation
-            if (stats.nodesChecked === 1 && this._overlayUpdateCount % 60 === 1) {
-                const pos = new THREE.Vector3();
-                const quat = new THREE.Quaternion();
-                const scale = new THREE.Vector3();
-                worldMatrix.decompose(pos, quat, scale);
-                console.log(`Node ${name} worldMatrix position: (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)})`);
-
-                // Sample first point transformation
-                if (positions.length >= 3) {
-                    const testPt = new THREE.Vector3(positions[0], positions[1], positions[2]);
-                    const worldPt = testPt.clone().applyMatrix4(worldMatrix);
-                    console.log(`  First point: local(${testPt.x.toFixed(1)}, ${testPt.y.toFixed(1)}, ${testPt.z.toFixed(1)}) -> world(${worldPt.x.toFixed(1)}, ${worldPt.y.toFixed(1)}, ${worldPt.z.toFixed(1)})`);
-                }
-            }
 
             for (let i = 0; i < pointCount; i++) {
                 stats.pointsChecked++;
@@ -614,11 +621,24 @@ class SelectionManager {
                 // Inside brush sphere - add to highlight (brighter)
                 if (dist3DSq < radiusSq) {
                     highlightPositions.push(px, py, pz);
+                    nodeHighlight++;
                 }
                 // Below brush (in XY shadow column, and below brush Z) - add to shadow (darker)
                 else if (pz < brushZ) {
                     shadowPositions.push(px, py, pz);
+                    nodeShadow++;
                 }
+            }
+
+            // Track node stats if any matches
+            if (nodeHighlight > 0 || nodeShadow > 0) {
+                nodeMatches.push({
+                    name: name,
+                    highlight: nodeHighlight,
+                    shadow: nodeShadow,
+                    totalPoints: pointCount,
+                    wouldBeCulled: wouldBeCulled
+                });
             }
         };
 
@@ -730,12 +750,21 @@ class SelectionManager {
             }
         }
 
+        // Get Potree's current point size for consistent overlay sizing
+        let potreePointSize = 1.0;
+        if (this.viewer.potreePointCloud && this.viewer.potreePointCloud.material) {
+            potreePointSize = this.viewer.potreePointCloud.material.size;
+        }
+        // Scale overlay size relative to Potree's size (slightly larger for visibility)
+        const highlightSize = potreePointSize * 0.12;
+        const shadowSize = potreePointSize * 0.10;
+
         // Update or create highlight points
         this.updateOverlayPoints(
             'highlight',
             highlightPositions,
             0xaaffaa,  // Light green/white - brighter
-            0.1,
+            highlightSize,
             0.95
         );
 
@@ -744,7 +773,7 @@ class SelectionManager {
             'shadow',
             shadowPositions,
             0x111111,  // Very dark - shadow effect
-            0.08,
+            shadowSize,
             0.8
         );
 
@@ -758,6 +787,68 @@ class SelectionManager {
             // If nothing found and we checked nodes, log debug info
             if (highlightPositions.length === 0 && shadowPositions.length === 0 && stats.nodesChecked > 0) {
                 console.log(`No points in brush! visibleNodesMap has ${visibleNodesMap.size} entries`);
+            }
+        }
+
+        // Update debug UI - also pass visibleNodesMap for debugging
+        this.updateDebugUI(brushX, brushY, brushZ, highlightPositions.length / 3, shadowPositions.length / 3, stats, nodeMatches, visibleNodesMap);
+    }
+
+    /**
+     * Update the debug UI with brush position and node match info
+     */
+    updateDebugUI(brushX, brushY, brushZ, highlightCount, shadowCount, stats, nodeMatches, visibleNodesMap) {
+        // Update brush position in debug panel
+        const dbgBrushX = document.getElementById('dbgBrushX');
+        const dbgBrushY = document.getElementById('dbgBrushY');
+        const dbgBrushZ = document.getElementById('dbgBrushZ');
+        const dbgHighlight = document.getElementById('dbgHighlightCount');
+        const dbgShadow = document.getElementById('dbgShadowCount');
+        const dbgNodesChecked = document.getElementById('dbgNodesChecked');
+        const dbgNodesCulled = document.getElementById('dbgNodesCulled');
+        const nodeMatchList = document.getElementById('nodeMatchList');
+
+        if (dbgBrushX) dbgBrushX.textContent = brushX.toFixed(2);
+        if (dbgBrushY) dbgBrushY.textContent = brushY.toFixed(2);
+        if (dbgBrushZ) dbgBrushZ.textContent = brushZ.toFixed(2);
+        if (dbgHighlight) dbgHighlight.textContent = highlightCount;
+        if (dbgShadow) dbgShadow.textContent = shadowCount;
+        if (dbgNodesChecked) dbgNodesChecked.textContent = stats.nodesChecked;
+        if (dbgNodesCulled) dbgNodesCulled.textContent = stats.subtreesCulled;
+
+        // Log visible parent nodes periodically
+        if (visibleNodesMap && this._overlayUpdateCount % 60 === 1) {
+            // Check which "parent" nodes exist (r, r0-r7, r00-r77, etc.)
+            const parentNodes = ['r', 'r0', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7'];
+            const presentParents = parentNodes.filter(n => visibleNodesMap.has(n));
+            const missingParents = parentNodes.filter(n => !visibleNodesMap.has(n));
+            console.log(`Visible parent nodes: ${presentParents.join(', ') || 'NONE'}`);
+            console.log(`Missing parent nodes: ${missingParents.join(', ')}`);
+            console.log(`Total visible nodes: ${visibleNodesMap.size}`);
+
+            // Also show first few node names to understand the structure
+            const allNames = Array.from(visibleNodesMap.keys()).sort();
+            console.log(`Sample visible nodes: ${allNames.slice(0, 10).join(', ')}...`);
+        }
+
+        // Update node match list (throttled to avoid too frequent DOM updates)
+        if (nodeMatchList && this._overlayUpdateCount % 10 === 1) {
+            if (nodeMatches.length === 0) {
+                nodeMatchList.innerHTML = '<div style="color: #666;">No matching nodes</div>';
+            } else {
+                // Sort by highlight + shadow count descending
+                nodeMatches.sort((a, b) => (b.highlight + b.shadow) - (a.highlight + a.shadow));
+
+                const lines = nodeMatches.slice(0, 30).map(m => {
+                    const culledFlag = m.wouldBeCulled ? '<span style="color: #ff6666;">⚠CULLED</span> ' : '';
+                    return `<div>${culledFlag}${m.name}: <span style="color: #aaffaa;">${m.highlight}h</span> <span style="color: #888;">${m.shadow}s</span> <span style="color: #555;">(${m.totalPoints}pts)</span></div>`;
+                });
+
+                if (nodeMatches.length > 30) {
+                    lines.push(`<div style="color: #555;">... and ${nodeMatches.length - 30} more nodes</div>`);
+                }
+
+                nodeMatchList.innerHTML = lines.join('');
             }
         }
     }
@@ -1239,12 +1330,19 @@ class SelectionManager {
             }
         }
 
+        // Get Potree's current point size for consistent overlay sizing
+        let potreePointSize = 1.0;
+        if (this.viewer.potreePointCloud && this.viewer.potreePointCloud.material) {
+            potreePointSize = this.viewer.potreePointCloud.material.size;
+        }
+        const selectionSize = potreePointSize * 0.14;
+
         // Update or create selection overlay
         this.updateOverlayPoints(
             'selection',
             selectedPositions,
             0x44ff44,  // Bright green for selected
-            0.12,      // Larger than normal points
+            selectionSize,
             1.0        // Fully opaque
         );
     }
